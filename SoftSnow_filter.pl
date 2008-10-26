@@ -1,6 +1,7 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 ### config ### 
 my $filter_file = "$ENV{'HOME'}/.xchat/SoftSnow_filter.conf";
