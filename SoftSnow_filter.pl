@@ -2,8 +2,12 @@
 
 use strict;
 
+### config ### 
+my $filter_file = "$ENV{'HOME'}/.xchat/SoftSnow_filter.conf";
+### end config ###
+
 my $scriptName    = "SoftSnow XChat Filter";
-my $scriptVersion = "1.2.2";
+my $scriptVersion = "1.2.3";
 
 IRC::register($scriptName, $scriptVersion, "", "");
 
@@ -15,13 +19,14 @@ my $code_bold   = chr 2;
 my $code_under  = chr 31;
 my $code_colour = chr 3;
 
-my $command_list = 'ON|OFF|STATUS|HELP|SERVER|ALL';
+my $command_list = 'ON|OFF|STATUS|SERVER|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
 IRC::print("Loading $code_bold$scriptName $scriptVersion$code_bold\n"
-	  ." Commands: ${code_bold}/FILTER ${command_list}${code_bold}\n");
+	  ." For help: ${code_bold}/FILTER HELP${code_bold}\n");
 
 my $filter_turned_on = 0; # was default turned ON
-my $limit_to_server  = 0; # don't limit to server
+my $limit_to_server  = 0; # don't limit to server (host)
+my $use_filter_allow = 0; # use overrides
 
 if ($filter_turned_on) {
   IRC::print("Filter turned ${code_bold}ON${code_bold}\n");
@@ -32,49 +37,55 @@ if ($limit_to_server) {
   IRC::print("Filtering limited to server $limit_to_server\n")
 }
 
-my @filter = 
+my @filter_allow =
   (
-   /\@/, 
-   /^\s*\!/, 
-   /slot\(s\)/, 
-   /~&~&~/,
-  
-  #xdcc
-  /^\#\d+/, 
-  
-  #fserves
-  /fserve.*trigger/i, 
-  /trigger.*\!/i, 
-  /trigger.*\/ctcp/i, 
-  /type\:\s*\!/i, 
-  /file server online/i, 
-  
-  #ftps
-  /ftp.*l\/p/i, 
-  
-  #CTCPs
-  /SLOTS/, 
-  /MP3 /, 
-  
-  #messages for when a file is received/failed to receive
-  /DEFINITELY had the right stuff to get/i, 
-  /has just received/i, 
-  /I have just received/i, 
-  
-  #mp3 play messages
-  /is listening to/, 
-  /\]\-MP3INFO\-\[/, 
-  
-  #spammy scripts
-  /\]\-SpR\-\[/, 
-  /We are BORG/, 
-  
-  #general messages
-  /brave soldier in the war/
-);
+   q/^\@search\s/
+  );
+
+my @filter_deny =
+  (
+   q/\@/, 
+   q/^\s*\!/, 
+   q/slot\(s\)/, 
+   q/~&~&~/,
+   
+   #xdcc
+   q/^\#\d+/, 
+   
+   #fserves
+   q/(?i)fserve.*trigger/, 
+   q/(?i)trigger.*\!/, 
+   q/(?i)trigger.*\/ctcp/, 
+   q/(?i)type\:\s*\!/, 
+   q/(?i)file server online/, 
+   
+   #ftps
+   q/(?i)ftp.*l\/p/, 
+   
+   #CTCPs
+   q/SLOTS/, 
+   q/MP3 /, 
+   
+   #messages for when a file is received/failed to receive
+   q/(?i)DEFINITELY had the right stuff to get/, 
+   q/(?i)has just received/, 
+  q/(?i)I have just received/, 
+   
+   #mp3 play messages
+   q/is listening to/, 
+   q/\]\-MP3INFO\-\[/, 
+   
+   #spammy scripts
+   q/\]\-SpR\-\[/, 
+   q/We are BORG/, 
+   
+   #general messages
+   q/brave soldier in the war/
+  );
 
 sub isFiltered {
   my $text = $_[0];
+  my $regexp = '';
 
   #strip colour, bold codes
   $text =~ s/$code_bold//go;
@@ -90,49 +101,15 @@ sub isFiltered {
 #    IRC::print("isFiltered : text=". $text. "\n");
 #  }
 
-  foreach ($regexp in @filter) {
-    return 1 if ($text =~ $regexp);
+  if ($use_filter_allow) {
+    foreach $regexp (@filter_allow) {
+      return 0 if ($text =~ /$regexp/);
+    }
   }
 
-  #adverts, requests
-  return 1 if ($text =~ /\@/ || $text =~ /^\s*\!/);
-  return 1 if ($text =~ /slot\(s\)/);
-  return 1 if ($text =~ /~&~&~/);
-
-  #xdcc
-  return 1 if ($text =~ /^\#\d+/);
-
-  #fserves
-  return 1 if ($text =~ /fserve.*trigger/i);
-  return 1 if ($text =~ /trigger.*\!/i);
-  return 1 if ($text =~ /trigger.*\/ctcp/i);
-  return 1 if ($text =~ /type\:\s*\!/i);
-  return 1 if ($text =~ /file server online/i);
-
-  #ftps
-  return 1 if ($text =~ /ftp.*l\/p/i);
-
-  #CTCPs
-  return 1 if ($text =~ /SLOTS/);
-  return 1 if ($text =~ /MP3 /);
-
-
-  #messages for when a file is received/failed to receive
-  return 1 if ($text =~ /DEFINITELY had the right stuff to get/i);
-  return 1 if ($text =~ /has just received/i);
-  return 1 if ($text =~ /I have just received/i);
-
-  #mp3 play messages
-  return 1 if ($text =~ /is listening to/);
-  return 1 if ($text =~ /\]\-MP3INFO\-\[/);
-
-  #spammy scripts
-  return 1 if ($text =~ /\]\-SpR\-\[/);
-  return 1 if ($text =~ /We are BORG/);
-
-  #general messages
-  return 1 if ($text =~ /brave soldier in the war/);
-
+  foreach $regexp (@filter_deny) {
+    return 1 if ($text =~ /$regexp/);
+  }
 
   return 0;
 }
@@ -150,7 +127,7 @@ sub privmsg_handler {
   #}
   my @params = split / /, $_[0];
 
-  my $server = IRC::get_info(3);
+  my $server = IRC::get_info(7); # host to be more exact; better for autoreconnect
 
   my $address = shift @params;
   my $constant = shift @params;
@@ -175,9 +152,48 @@ sub privmsg_handler {
   return isFiltered($text);
 }
 
+sub save_filter {
+  open F, ">$filter_file"
+    or do {
+      IRC::print("FILTER: Couldn't open file to save filter: $!\n");
+      return 1;
+    };
+  #print F "# $alias_file - config for alias.pl\n";
+  IRC::print("FILTER SAVE >$filter_file\n");
+  foreach my $regexp (@filter_deny) {
+    IRC::print("/".$regexp."/ saved\n");
+    print F $regexp."\n";
+  }
+  IRC::print("FILTER SAVE ----------\n");
+  close F 
+    or do {
+      IRC::print("FILTER: Couldn't close file to save filter: $!\n");
+      return 1;
+    };
+  return 1;
+}
+
+sub load_filter {
+  IRC::print("FILTER: ...loading filter patterns\n");
+  open F, "<$filter_file"
+    or do {
+      IRC::print("FILTER: Couldn't open file to load filter: $!\n");
+      return 1;
+    };
+  @filter_deny = <F>;
+  map (chomp, @filter_deny);
+  close F;
+
+  IRC::print("${code_bold}FILTER DENY${code_bold}\n");
+  for (my $i = 0; $i <= $#filter_deny; $i++) {
+    IRC::print(" [$i]: /".$filter_deny[$i]."/\n");
+  }
+}
+
+
 sub filter_command_handler ( $ ) {
   my ($arg) = $_[0];
-  my $server = IRC::get_info(3);
+  my $server = IRC::get_info(7);
 
   #IRC::print("/filter arg: |$arg|\n");
   if ($arg =~ /^ON\b/i) {
@@ -190,12 +206,15 @@ sub filter_command_handler ( $ ) {
 
   } elsif ($arg =~ /^STATUS\b/i) {
     if ($filter_turned_on) {
-      IRC::print("Filter is turned ON\n");
+      IRC::print("Filter is turned ${code_bold}ON${code_bold}\n");
     } else {
-      IRC::print("Filter is turned OFF\n");
+      IRC::print("Filter is turned ${code_bold}OFF${code_bold}\n");
     }
     if ($limit_to_server) {
       IRC::print("Filtering limited to server $server\n");
+    }
+    if ($use_filter_allow) {
+      IRC::print("Using ALLOW rules (before DENY)\n");
     }
 
   } elsif ($arg =~ /^SERVER\b/i) {
@@ -214,9 +233,79 @@ sub filter_command_handler ( $ ) {
 
   } elsif ($arg =~ /^HELP\b/i) {
     IRC::print("/FILTER $command_list\n".
-	       "/FILTER SERVER - limits filtering to current server\n".
-	       "/FILTER ALL - resumes filtering everywhere\n".
-	       "/FILTER without parameter toggles filter\n");
+	       "/FILTER ON|OFF - turns filtering on/off\n".
+	       "/FILTER HELP - prints this help message\n".
+	       "/FILTER STATUS - prints if filter is turned on, and with what limits\n".
+	       "/FILTER DEBUG - shows some info; used in debuggin the filter\n".
+	       "/FILTER PRINT - prints all the rules\n".
+	       "/FILTER ALLOW - toggle use of ALLOW rules (before DENY)\n".
+	       "/FILTER SERVER - limits filtering to current server (host))\n".
+	       "/FILTER ALL - resumes filtering everywhere i.e. removes limits\n".
+	       "/FILTER SAVE - saves the rules to the file $filter_file\n".
+	       "/FILTER LOAD - loads the rules from the file, replacing existing rules\n".
+	       "/FILTER ADD <rule> - add rule at the end of the DENY rules\n".
+	       "/FILTER DELETE <num> - delete rule number <num>, or last rule\n".
+	       "/FILTER without parameter toggles filtering\n");
+
+  } elsif ($arg =~ /^DEBUG\b/i) {
+    IRC::print("FILTER DEBUG ----------\n");
+    IRC::print("Channel: ".IRC::get_info(2)."\n");
+    IRC::print("Server:  ".IRC::get_info(3)."\n");
+    IRC::print("Network: ".IRC::get_info(6)."\n");
+    IRC::print("Host:    ".IRC::get_info(7)."\n");
+    IRC::print("FILTER DEBUG ----------\n");
+
+  } elsif ($arg =~ /^PRINT/i) {
+    IRC::print("FILTER PRINT ----------\n");
+    IRC::print("${code_bold}ALLOW${code_bold}".($use_filter_allow ? ' (on)' : ' (off)')."\n");
+    for (my $i = 0; $i <= $#filter_allow; $i++) {
+      IRC::print("[$i]: /".$filter_allow[$i]."/\n");
+    }
+    IRC::print("${code_bold}DENY${code_bold}\n");
+    for (my $i = 0; $i <= $#filter_deny; $i++) {
+      IRC::print("[$i]: /".$filter_deny[$i]."/\n");
+    }
+    IRC::print("FILTER PRINT ----------\n");
+
+  } elsif ($arg =~ /^ALLOW/i) {
+    $use_filter_allow = !$use_filter_allow;
+    IRC::print("FILTER: ALLOW rules ".($use_filter_allow ? "enabled" : "disabled")."\n");
+  } elsif ($arg =~ /^ADD\s+(.*)/i) {
+    if ($1) {
+      push @filter_deny, $1;
+      IRC::print("FILTER RULE [$#filter_deny]: /$1/\n");
+    } else {
+      IRC::print("Syntax: ${code_bold}/FILTER ADD${code_bold} rule to add\n")
+    }
+
+  } elsif ($arg =~ /^DEL(ETE)?\s*(.*)\s*/i) {
+    my $num = $1;
+  SWITCH: {
+      unless ($num) {
+	IRC::print("{$code_bold}FILTER:${code_bold} deleting /".$filter_deny[-1]."/\n");
+	$#filter_deny--;
+	IRC::print("{$code_bold}FILTER:${code_bold} deleted successfully last rule\n");
+	last SWITCH;
+      }
+      if ($num !~ /^\d+$/) { 
+	IRC::print("{$code_bold}FILTER:${code_bold} $num is not a number\n");
+	last SWITCH;
+      }
+      if ($num < 0 || $num > $#filter_deny) {
+	IRC::print("{$code_bold}FILTER:${code_bold} $num outside range [0,$#filter_deny]\n");
+	last SWITCH;
+      }
+      IRC::print("{$code_bold}FILTER:${code_bold} deleting /".$filter_deny[$num]."/\n");
+      @filter_deny = (@filter_deny[0..$num-1],@filter_deny[$num+1..$#filter_deny]);
+      IRC::print("{$code_bold}FILTER:${code_bold} deleted successfully rule $num\n");
+    }
+
+  } elsif ($arg =~ /^SAVE/i) {
+    save_filter();
+
+  } elsif ($arg =~ /^(RE)?LOAD/i) {
+    load_filter();
+
   } else {
     IRC::print("/filter arg: |$arg|\n") if $arg;
 #     if ($filter_turned_on) {
