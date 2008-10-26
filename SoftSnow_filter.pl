@@ -23,7 +23,7 @@ my $C = chr 3;  # color
 my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
 IRC::print("Loading ${B}$scriptName $scriptVersion${B}\n".
-	   " For help: ${B}/FILTER HELP${B}\n");
+           " For help: ${B}/FILTER HELP${B}\n");
 
 my $filter_turned_on = 0; # was default turned ON
 my $limit_to_server  = 0; # don't limit to server (host)
@@ -87,7 +87,7 @@ my @filter_deny =
    q/We are BORG/, 
    
    #general messages
-   q/brave soldier in the war/
+   q/brave soldier in the war/, 
   );
 
 sub isFiltered {
@@ -98,15 +98,6 @@ sub isFiltered {
   $text =~ s/${B}//go; # code bold
   $text =~ s/${U}//go; # code under
   $text =~ s/${C}\d+(,\d+)?//go; # code colour
-
-  #debug
-  #for (my $i=0; $i < length $text; $i++){
-  #  IRC::print("$i=[" . ord(substr($text,$i,1)) . "]=" . substr($text,$i,1) . "\n");
-  #}
-
-#  if (/MP3/){
-#    IRC::print("isFiltered : text=". $text. "\n");
-#  }
 
   if ($use_filter_allow) {
     foreach $regexp (@filter_allow) {
@@ -129,9 +120,6 @@ sub isFiltered {
 #return 0 to allow the text to be printed, 1 to filter it
 sub privmsg_handler {
   $_[0] =~ s/\s{2,}/ /g;
-  #if ($_[0] =~ /MP3/){
-  #  IRC::print("MP3 LINE is $_[0]\n");
-  #}
   my @params = split / /, $_[0];
 
   my $server = IRC::get_info(7); # host to be more exact; better for autoreconnect
@@ -151,11 +139,6 @@ sub privmsg_handler {
 
   $text =~ s/^://;
 
-  #IRC::print("privmsg_handler: address=$address\n");
-  #IRC::print("privmsg_handler: chan=$chan\n");
-  #IRC::print("privmsg_handler: constant=$constant\n");
-  #IRC::print("privmsg_handler: text=$text\n");
-
   return isFiltered($text);
 }
 
@@ -167,7 +150,7 @@ sub save_filter {
       IRC::print("${B}FILTER:${B} Couldn't open file to save filter: $!\n");
       return 1;
     };
-  #print F "# $alias_file - config for alias.pl\n";
+
   IRC::print("${B}FILTER SAVE >$filter_file${B}\n");
   foreach my $regexp (@filter_deny) {
     IRC::print("/".$regexp."/ saved\n");
@@ -357,13 +340,6 @@ sub filter_command_handler ( $ ) {
 
   } else {
     IRC::print("/filter arg: |$arg|\n") if $arg;
-#     if ($filter_turned_on) {
-#       $filter_turned_on = 0;
-#       IRC::print("Filter turned OFF\n");
-#     } else {
-#       $filter_turned_on = 1;
-#       IRC::print("Filter turned ON\n");
-#     }
   }
   return 1;
 }
