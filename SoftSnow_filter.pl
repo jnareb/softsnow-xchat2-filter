@@ -151,7 +151,7 @@ sub privmsg_handler {
 
 	$text =~ s/^://;
 
-	return isFiltered($text) ? Xchat::EAT_XCHAT : Xchat::EAT_NONE;
+	return isFiltered($text) ? Xchat::EAT_ALL : Xchat::EAT_NONE;
 }
 
 # ------------------------------------------------------------
