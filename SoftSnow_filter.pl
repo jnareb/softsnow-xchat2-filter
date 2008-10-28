@@ -45,9 +45,9 @@ Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
              " For help: ${B}/FILTER HELP${B}\n");
 
-my $filter_turned_on = 0; # was default turned ON
-my $limit_to_server  = 0; # don't limit to server (host)
-my $use_filter_allow = 0; # use overrides
+my $filter_turned_on = 0;  # was default turned ON
+my $limit_to_server  = ''; # don't limit to server (host)
+my $use_filter_allow = 0;  # use overrides
 
 # information about (default) options used
 if ($filter_turned_on) {
