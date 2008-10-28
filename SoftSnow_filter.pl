@@ -203,10 +203,9 @@ sub add_rule ( $ ) {
 }
 
 sub delete_rule ( $ ) {
-	my $num = shift;
+	my $num = shift || $#filter_deny;
 
-	# we have checked that $num is inside the boundaries
-	@filter_deny = (@filter_deny[0..$num-1],@filter_deny[$num+1..$#filter_deny]);
+	splice @filter_deny, $num, 1;
 }
 
 # ============================================================
