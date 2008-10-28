@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 ### config ### 
-my $filter_file = "$ENV{'HOME'}/.xchat/SoftSnow_filter.conf";
+my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 ### end config ###
 
 my $scriptName    = "SoftSnow XChat2 Filter";
