@@ -213,20 +213,12 @@ sub delete_rule ( $ ) {
 # ============================================================
 # ============================================================
 
-sub filter_command_handler ( $ ) {
-	my ($arg) = $_[1][1]; # 1st word to the last word
+sub filter_command_handler {
+	my $arg = $_[1][1]; # 1st word to the last word
 	my $server = Xchat::get_info("host");
 
 	#Xchat::print("/filter arg: |$arg|\n");
-	if ($arg =~ /^ON\b/i) {
-		$filter_turned_on = 1;
-		Xchat::print("Filter turned ON\n");
-
-	} elsif ($arg =~ /^OFF\b/i) {
-		$filter_turned_on = 0;
-		Xchat::print("Filter turned OFF\n");
-
-	} elsif ($arg =~ /^STATUS\b/i || !$arg) {
+	if (!$arg || $arg =~ /^STATUS\b/i) {
 		if ($filter_turned_on) {
 			Xchat::print("Filter is turned ${B}ON${B}\n");
 		} else {
@@ -240,6 +232,14 @@ sub filter_command_handler ( $ ) {
 		if ($use_filter_allow) {
 			Xchat::print("Filter is using ALLOW rules (before DENY)\n");
 		}
+
+	} elsif ($arg =~ /^ON\b/i) {
+		$filter_turned_on = 1;
+		Xchat::print("Filter turned ON\n");
+
+	} elsif ($arg =~ /^OFF\b/i) {
+		$filter_turned_on = 0;
+		Xchat::print("Filter turned OFF\n");
 
 	} elsif ($arg =~ /^SERVER\b/i) {
 		if ($limit_to_server) {
