@@ -269,6 +269,9 @@ sub filter_command_handler {
 
 	} elsif ($arg =~ /^VERSION\b/i) {
 		Xchat::print("${B}$scriptName $scriptVersion${B}\n");
+		Xchat::print(" * URL: http://github.com/jnareb/softsnow-xchat2-filter\n");
+		Xchat::print(" * URL: http://gitorious.org/projects/softsnow-xchat2-filter\n");
+		Xchat::print(" * URL: http://repo.or.cz/w/softsnow_xchat2_filter.git\n");
 
 	} elsif ($arg =~ /^DEBUG\b/i || $arg =~ /^INFO\b/i) {
 		Xchat::print("${B}FILTER DEBUG ----------${B}\n");
