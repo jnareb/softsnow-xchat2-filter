@@ -8,7 +8,7 @@ my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 ### end config ###
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.0";
+my $scriptVersion = "2.0.1";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = "\cB"; # bold
