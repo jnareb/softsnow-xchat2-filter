@@ -275,10 +275,14 @@ sub filter_command_handler {
 
 	} elsif ($arg =~ /^DEBUG\b/i || $arg =~ /^INFO\b/i) {
 		Xchat::print("${B}FILTER DEBUG ----------${B}\n");
-		Xchat::print("Channel: ".Xchat::get_info("channel")."\n");
-		Xchat::print("Server:  ".Xchat::get_info("server")."\n");
-		Xchat::print("Network: ".Xchat::get_info("network")."\n");
-		Xchat::print("Host:    ".Xchat::get_info("host")."\n");
+		Xchat::print("Channel:   ".Xchat::get_info("channel")."\n");
+		Xchat::print("Host:      ".Xchat::get_info("host")."\n");
+		Xchat::print("Server:    ".Xchat::get_info("server")."\n");
+		Xchat::print("Server Id: ".Xchat::get_info("id")."\n");
+		Xchat::print("Network:   ".Xchat::get_info("network")."\n");
+		Xchat::print("\n");
+		Xchat::printf("%3u %s rules\n", scalar(@filter_allow), "allow");
+		Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
 		Xchat::print("${B}FILTER DEBUG ----------${B}\n");
 
 	} elsif ($arg =~ /^PRINT/i) {
