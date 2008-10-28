@@ -11,16 +11,36 @@ my $scriptName    = "SoftSnow XChat2 Filter";
 my $scriptVersion = "2.0";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
-Xchat::register($scriptName, $scriptVersion, $scriptDescr);
-
-Xchat::hook_command("FILTER", \&filter_command_handler);
-Xchat::hook_server("PRIVMSG", \&privmsg_handler);
-
 my $B = "\cB"; # bold
 my $U = "\cU"; # underline
 my $C = "\cC"; # start of color sequence
 
 my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
+
+my $scriptHelp = <<"EOF";
+${B}/FILTER $command_list${B}
+/FILTER ON|OFF - turns filtering on/off
+/FILTER HELP - prints this help message
+/FILTER STATUS - prints if filter is turned on, and with what limits
+/FILTER DEBUG - shows some info; used in debuggin the filter
+/FILTER PRINT - prints all the rules
+/FILTER ALLOW - toggle use of ALLOW rules (before DENY).
+/FILTER SERVER - limits filtering to current server (host)
+/FILTER SERVERON - limits to server and turns filter on
+/FILTER ALL - resumes filtering everywhere i.e. removes limits
+/FILTER SAVE - saves the rules to the file $filter_file
+/FILTER LOAD - loads the rules from the file, replacing existing rules
+/FILTER ADD <rule> - add rule at the end of the DENY rules
+/FILTER DELETE [<num>] - delete rule number <num>, or last rule
+/FILTER VERSION - prints the name and version of this script
+/FILTER without parameter is equivalent to /FILTER STATUS
+EOF
+
+Xchat::register($scriptName, $scriptVersion, $scriptDescr);
+
+Xchat::hook_command("FILTER", \&filter_command_handler,
+                    { help_text => $scriptHelp });
+Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
              " For help: ${B}/FILTER HELP${B}\n");
@@ -246,24 +266,7 @@ sub filter_command_handler ( $ ) {
 		$limit_to_server = 0;
 
 	} elsif ($arg =~ /^HELP\b/i) {
-		Xchat::print(<<"EOF");
-${B}/FILTER $command_list${B}
-/FILTER ON|OFF - turns filtering on/off
-/FILTER HELP - prints this help message
-/FILTER STATUS - prints if filter is turned on, and with what limits
-/FILTER DEBUG - shows some info; used in debuggin the filter
-/FILTER PRINT - prints all the rules
-/FILTER ALLOW - toggle use of ALLOW rules (before DENY).
-/FILTER SERVER - limits filtering to current server (host)
-/FILTER SERVERON - limits to server and turns filter on
-/FILTER ALL - resumes filtering everywhere i.e. removes limits
-/FILTER SAVE - saves the rules to the file $filter_file
-/FILTER LOAD - loads the rules from the file, replacing existing rules
-/FILTER ADD <rule> - add rule at the end of the DENY rules
-/FILTER DELETE [<num>] - delete rule number <num>, or last rule
-/FILTER VERSION - prints the name and version of this script
-/FILTER without parameter is equivalent to /FILTER STATUS
-EOF
+		Xchat::print($scriptHelp);
 
 	} elsif ($arg =~ /^VERSION\b/i) {
 		Xchat::print("${B}$scriptName $scriptVersion${B}\n");
