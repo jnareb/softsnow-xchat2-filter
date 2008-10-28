@@ -16,9 +16,9 @@ Xchat::register($scriptName, $scriptVersion, $scriptDescr);
 Xchat::hook_command("FILTER", \&filter_command_handler);
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
-my $B = chr 2;  # bold
-my $U = chr 31; # underline
-my $C = chr 3;  # color
+my $B = "\cB"; # bold
+my $U = "\cU"; # underline
+my $C = "\cC"; # start of color sequence
 
 my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
