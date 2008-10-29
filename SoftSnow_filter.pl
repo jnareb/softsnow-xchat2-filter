@@ -18,6 +18,9 @@ my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 my $filter_turned_on = 0;  # was default turned ON
 my $limit_to_server  = ''; # don't limit to server (host)
 my $use_filter_allow = 0;  # use overrides
+
+my $filtered_to_window = 0;
+my $filter_window = "(filtered)";
 ### end config ###
 
 my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
@@ -50,6 +53,10 @@ Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
              " For help: ${B}/FILTER HELP${B}\n");
 
+# GUI, windows, etc.
+if ($filtered_to_window) {
+	Xchat::command("QUERY $filter_window");
+}
 
 # information about (default) options used
 if ($filter_turned_on) {
@@ -153,7 +160,11 @@ sub privmsg_handler {
 
 	$text =~ s/^://;
 
-	return isFiltered($text) ? Xchat::EAT_ALL : Xchat::EAT_NONE;
+	if (isFiltered($text)) {
+		Xchat::print($text, $filter_window) if $filtered_to_window;
+		return Xchat::EAT_ALL;
+	}
+	return Xchat::EAT_NONE;
 }
 
 # ------------------------------------------------------------
