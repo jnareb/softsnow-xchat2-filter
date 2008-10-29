@@ -12,6 +12,14 @@ my $B = "\cB"; # bold
 my $U = "\cU"; # underline
 my $C = "\cC"; # start of color sequence
 
+### config ###
+my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
+
+my $filter_turned_on = 0;  # was default turned ON
+my $limit_to_server  = ''; # don't limit to server (host)
+my $use_filter_allow = 0;  # use overrides
+### end config ###
+
 my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
 my $scriptHelp = <<"EOF";
@@ -42,13 +50,6 @@ Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
              " For help: ${B}/FILTER HELP${B}\n");
 
-### config ### 
-my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
-
-my $filter_turned_on = 0;  # was default turned ON
-my $limit_to_server  = ''; # don't limit to server (host)
-my $use_filter_allow = 0;  # use overrides
-### end config ###
 
 # information about (default) options used
 if ($filter_turned_on) {
