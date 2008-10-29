@@ -19,7 +19,7 @@ my $filter_turned_on = 0;  # was default turned ON
 my $limit_to_server  = ''; # don't limit to server (host)
 my $use_filter_allow = 0;  # use overrides
 
-my $filtered_to_window = 0;
+my $filtered_to_window = 1;
 my $filter_window = "(filtered)";
 ### end config ###
 
