@@ -215,11 +215,12 @@ sub delete_rule ( $ ) {
 # ============================================================
 
 sub filter_command_handler {
-	my $arg = $_[1][1]; # 1st word to the last word
+	my $cmd = $_[0][1]; # 1st parameter (after FILTER)
+	my $arg = $_[1][2]; # 2nd word to the last word
 	my $server = Xchat::get_info("host");
 
 
-	if (!$arg || $arg =~ /^STATUS\b/i) {
+	if (!$cmd || $cmd =~ /^STATUS$/i) {
 		if ($filter_turned_on) {
 			Xchat::print("Filter is turned ${B}ON${B}\n");
 		} else {
@@ -238,15 +239,15 @@ sub filter_command_handler {
 			Xchat::print("Filter is using ALLOW rules (before DENY)\n");
 		}
 
-	} elsif ($arg =~ /^ON\b/i) {
+	} elsif ($cmd =~ /^ON$/i) {
 		$filter_turned_on = 1;
 		Xchat::print("Filter turned ON\n");
 
-	} elsif ($arg =~ /^OFF\b/i) {
+	} elsif ($cmd =~ /^OFF$/i) {
 		$filter_turned_on = 0;
 		Xchat::print("Filter turned OFF\n");
 
-	} elsif ($arg =~ /^SERVER\b/i) {
+	} elsif ($cmd =~ /^SERVER$/i) {
 		if ($limit_to_server) {
 			Xchat::print("${B}FILTER:${B} Changing server from $limit_to_server to $server\n");
 		} else {
@@ -254,7 +255,7 @@ sub filter_command_handler {
 		}
 		$limit_to_server = $server;
 
-	} elsif ($arg =~ /^SERVERON\b/i) {
+	} elsif ($cmd =~ /^SERVERON$/i) {
 		if ($limit_to_server) {
 			Xchat::print("${B}FILTER:${B} Changing server from $limit_to_server to $server\n");
 		} else {
@@ -265,22 +266,22 @@ sub filter_command_handler {
 		$filter_turned_on = 1;
 		Xchat::print("Filter turned ${B}ON${B}\n");
 
-	} elsif ($arg =~ /^ALL\b/i) {
+	} elsif ($cmd =~ /^ALL$/i) {
 		if ($limit_to_server) {
 			Xchat::print("Filter: Removing limit to server $limit_to_server\n");
 		}
 		$limit_to_server = 0;
 
-	} elsif ($arg =~ /^HELP\b/i) {
+	} elsif ($cmd =~ /^HELP$/i) {
 		Xchat::print($scriptHelp);
 
-	} elsif ($arg =~ /^VERSION\b/i) {
+	} elsif ($cmd =~ /^VERSION$/i) {
 		Xchat::print("${B}$scriptName $scriptVersion${B}\n");
 		Xchat::print(" * URL: http://github.com/jnareb/softsnow-xchat2-filter\n");
 		Xchat::print(" * URL: http://gitorious.org/projects/softsnow-xchat2-filter\n");
 		Xchat::print(" * URL: http://repo.or.cz/w/softsnow_xchat2_filter.git\n");
 
-	} elsif ($arg =~ /^DEBUG\b/i || $arg =~ /^INFO\b/i) {
+	} elsif ($cmd =~ /^DEBUG$/i || $cmd =~ /^INFO$/i) {
 		Xchat::print("${B}FILTER DEBUG ----------${B}\n");
 		Xchat::print("Channel:   ".Xchat::get_info("channel")."\n");
 		Xchat::print("Host:      ".Xchat::get_info("host")."\n");
@@ -292,7 +293,7 @@ sub filter_command_handler {
 		Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
 		Xchat::print("${B}FILTER DEBUG ----------${B}\n");
 
-	} elsif ($arg =~ /^(?:PRINT|LIST)\b/i) {
+	} elsif ($cmd =~ /^(?:PRINT|LIST)$/i) {
 		Xchat::print("${B}FILTER PRINT ----------${B}\n");
 		Xchat::print("${B}ALLOW${B}".($use_filter_allow ? ' (on)' : ' (off)')."\n");
 		for (my $i = 0; $i <= $#filter_allow; $i++) {
@@ -304,13 +305,13 @@ sub filter_command_handler {
 		}
 		Xchat::print("${B}FILTER PRINT ----------${B}\n");
 
-	} elsif ($arg =~ /^ALLOW/i) {
+	} elsif ($cmd =~ /^ALLOW$/i) {
 		$use_filter_allow = !$use_filter_allow;
 		Xchat::print("${B}FILTER:${B} ALLOW rules ".
 		             ($use_filter_allow ? "enabled" : "disabled")."\n");
 
-	} elsif ($arg =~ /^ADD\s+(.*)/i) {
-		my $rule = $1;
+	} elsif ($cmd =~ /^ADD$/i) {
+		my $rule = $arg;
 		if ($rule) {
 			add_rule($rule);
 			Xchat::print("${B}FILTER RULE [$#filter_deny]:${B} /$rule/\n");
@@ -318,8 +319,9 @@ sub filter_command_handler {
 			Xchat::print("Syntax: ${B}/FILTER ADD ${U}rule${U}${B} to add\n")
 		}
 
-	} elsif ($arg =~ /^DEL(?:ETE)?(.*)/i) {
-		my $num = $1;
+	} elsif ($cmd =~ /^DEL(?:ETE)$/i) {
+		my $num = $arg;
+		# strip whitespace
 		$num =~ s/^\s*(.*?)\s*$/$1/g;
 	SWITCH: {
 			unless ($num) {
@@ -342,16 +344,16 @@ sub filter_command_handler {
 			Xchat::print("${B}FILTER:${B} deleted successfully rule $num\n");
 		}
 
-	} elsif ($arg =~ /^SAVE\b/i) {
+	} elsif ($cmd =~ /^SAVE$/i) {
 		save_filter();
 		Xchat::print("${B}FILTER:${B} saved DENY rules to $filter_file\n");
 
-	} elsif ($arg =~ /^(RE)?LOAD\b/i) {
+	} elsif ($cmd =~ /^(RE)?LOAD$/i) {
 		load_filter();
 		Xchat::print("${B}FILTER:${B} loaded DENY rules from $filter_file\n");
 
 	} else {
-		Xchat::print("Unknown command $ {B}/FILTER $arg${B}\n") if $arg;
+		Xchat::print("Unknown command ${B}/FILTER $_[1][1]${B}\n") if $cmd;
 	}
 	return 1;
 }
