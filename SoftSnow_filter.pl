@@ -242,11 +242,11 @@ sub filter_command_handler {
 
 	} elsif ($cmd =~ /^ON$/i) {
 		$filter_turned_on = 1;
-		Xchat::print("Filter turned ON\n");
+		Xchat::print("Filter turned ${B}ON${B}\n");
 
 	} elsif ($cmd =~ /^OFF$/i) {
 		$filter_turned_on = 0;
-		Xchat::print("Filter turned OFF\n");
+		Xchat::print("Filter turned ${B}OFF${B}\n");
 
 	} elsif ($cmd =~ /^SERVER$/i) {
 		if ($limit_to_server) {
