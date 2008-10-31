@@ -48,10 +48,19 @@ ${B}/FILTER $filter_commands${B}
 /FILTER without parameter is equivalent to /FILTER STATUS
 EOF
 
+my $filterwindow_commands = 'ON|OFF';
+
+my $filterwindow_help = <<"EOF";
+${B}/FILTERWINDOW $filterwindow_commands${B}
+/FILTERWINDOW ON|OFF - turns saving filtered content to ${U}$filter_window${U}
+EOF
+
 Xchat::register($scriptName, $scriptVersion, $scriptDescr);
 
 Xchat::hook_command("FILTER", \&filter_command_handler,
                     { help_text => $filter_help });
+Xchat::hook_command("FILTERWINDOW", \&filterwindow_command_handler,
+                    { help_text => $filterwindow_help });
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
@@ -418,6 +427,7 @@ sub filter_command_handler {
 
 	} elsif ($cmd =~ /^HELP$/i) {
 		Xchat::print($filter_help);
+		Xchat::print($filterwindow_help);
 
 	} elsif ($cmd =~ /^VERSION$/i) {
 		cmd_version();
@@ -455,6 +465,46 @@ sub filter_command_handler {
 	}
 	return 1;
 }
+
+sub filterwindow_command_handler {
+	my $cmd = $_[0][1]; # 1st parameter (after FILTER)
+	#my $arg = $_[1][2]; # 2nd word to the last word
+
+	if (!$cmd) {
+		Xchat::print("${B}${U}USAGE:${U} /FILTERWINDOW ON|OFF${B}\n");
+
+	} elsif ($cmd =~ /^ON$/i) {
+		Xchat::command("QUERY $filter_window");
+		Xchat::print("${B}----- START LOGGING FILTERED CONTENTS -----${B}\n",
+		             $filter_window)
+			if !$filtered_to_window;
+
+		$filtered_to_window = 1;
+		Xchat::print("Show filtered content in ${B}$filter_window${B}\n");
+
+	} elsif ($cmd =~ /^OFF$/i) {
+		Xchat::print("${B}----- STOP LOGGING FILTERED CONTENTS -----${B}\n",
+		             $filter_window)
+			if $filtered_to_window;
+		#Xchat::command("CLOSE", $FilterWindow);
+
+		$filtered_to_window = 1;
+		Xchat::print("Don't show filtered content in ${B}$filter_window${B}\n");
+
+	} elsif ($cmd =~ /^HELP$/i) {
+		Xchat::print($filterwindow_help);
+
+	} else {
+		Xchat::print("Unknown command ${B}/FILTERWINDOW $_[1][1]${B}\n") if $cmd;
+		Xchat::print("${B}${U}USAGE:${U} /FILTERWINDOW ON|OFF${B}\n");
+	}
+
+	return 1;
+}
+
+# ======================================================================
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# ----------------------------------------------------------------------
 
 Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n");
 
