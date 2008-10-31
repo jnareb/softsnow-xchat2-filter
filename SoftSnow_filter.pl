@@ -8,7 +8,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.1.2";
+my $scriptVersion = "2.1.3";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr  2; # bold
