@@ -488,7 +488,7 @@ sub filterwindow_command_handler {
 			if $filtered_to_window;
 		#Xchat::command("CLOSE", $FilterWindow);
 
-		$filtered_to_window = 1;
+		$filtered_to_window = 0;
 		Xchat::print("Don't show filtered content in ${B}$filter_window${B}\n");
 
 	} elsif ($cmd =~ /^HELP$/i) {
