@@ -95,7 +95,7 @@ my $filtered_to_window = 0;
 my $filter_window = "(filtered)";
 ### end config ###
 
-my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
+my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|CLEARSTATS|SORT|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
 my $filter_help = <<"EOF";
 ${B}/FILTER $filter_commands${B}
@@ -103,6 +103,8 @@ ${B}/FILTER $filter_commands${B}
 /FILTER HELP - prints this help message
 /FILTER STATUS - prints if filter is turned on, and with what limits
 /FILTER DEBUG - shows some info; used in debuggin the filter
+/FILTER CLEARSTATS - reset filter statistics
+/FILTER SORT - sort deny rules to have more often matched rules first
 /FILTER PRINT - prints all the rules
 /FILTER ALLOW - toggle use of ALLOW rules (before DENY).
 /FILTER SERVER - limits filtering to current server (host)
@@ -205,6 +207,11 @@ my @filter_deny = (
 	q/brave soldier in the war/,
 );
 
+my $nfiltered   = 0; # how many lines were filtered
+my $checklensum = 0; # how many rules to check to catch filtered
+my $nallow      = 0; # how many lines matched ALLOW rule
+my %stats = (); # histogram: how many times given rule was used
+
 # return 1 (true) if text given as argument is to be filtered out
 sub isFiltered {
 	my $text = shift;
@@ -215,12 +222,29 @@ sub isFiltered {
 
 	if ($use_filter_allow) {
 		foreach $regexp (@filter_allow) {
-			return 0 if ($text =~ /$regexp/);
+			if ($text =~ /$regexp/) {
+				$nallow++;
+				return 0;
+			}
 		}
 	}
 
+	my $nrules_checked = 0;
 	foreach $regexp (@filter_deny) {
-		return 1 if ($text =~ /$regexp/);
+		$nrules_checked++;
+
+		if ($text =~ /$regexp/) {
+			# filter statistic
+			$nfiltered++;
+			$checklensum += $nrules_checked;
+			if (exists $stats{$regexp}) {
+				$stats{$regexp}++;
+			} else {
+				$stats{$regexp} = 1;
+			}
+
+			return 1;
+		}
 	}
 
 	return 0;
@@ -338,6 +362,14 @@ sub delete_rule ( $ ) {
 	splice @filter_deny, $num, 1;
 }
 
+sub slquote {
+	my $text = shift;
+
+	$text =~ s!([\/])!\$1!g;
+
+	return $text;
+}
+
 # ============================================================
 # ------------------------------------------------------------
 # ............................................................
@@ -378,10 +410,43 @@ sub cmd_debug {
 	Xchat::print("Server:    ".Xchat::get_info("server")."\n");
 	Xchat::print("Server Id: ".Xchat::get_info("id")."\n");
 	Xchat::print("Network:   ".Xchat::get_info("network")."\n");
+
 	Xchat::print("\n");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_allow), "allow");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
+
+	my %deny_idx = ();
+	# %deny_idx = map { $filter_deny[$_] => $_ } 0..$#filter_deny;
+	@deny_idx{ @filter_deny } = (0..$#filter_deny);
+	Xchat::print("\n");
+	Xchat::print("filtered lines   = $nfiltered\n");
+	Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
+	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
+		Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
+		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
+		              $deny_idx{$rule}, slquote($rule));
+	}
+	if ($use_filter_allow) {
+		Xchat::print("allow matches    = $nallow\n");
+	}
 	Xchat::print("${B}FILTER DEBUG ----------${B}\n");
+}
+
+sub cmd_clear_stats {
+	$nfiltered   = 0;
+	$checklensum = 0;
+	$nallow      = 0;
+	%stats = ();
+
+	Xchat::print("${B}FILTER:${B} stats cleared\n");
+}
+
+sub cmd_sort_by_stats {
+	use sort 'stable';
+
+	@filter_deny =
+		sort { ($stats{$b} || 0) <=> ($stats{$a} || 0) }
+		@filter_deny;
 }
 
 sub cmd_server_limit {
@@ -530,6 +595,12 @@ sub filter_command_handler {
 
 	} elsif ($cmd =~ /^DEBUG$/i || $cmd =~ /^INFO$/i) {
 		cmd_debug();
+
+	} elsif ($cmd =~ /^CLEARSTAT(?:S)?$/i) {
+		cmd_clear_stats();
+
+	} elsif ($cmd =~ /^SORT$/i) {
+		cmd_sort_by_stats();
 
 	} elsif ($cmd =~ /^(?:PRINT|LIST)$/i) {
 		cmd_print_rules();
