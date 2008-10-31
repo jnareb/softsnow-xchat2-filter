@@ -5,7 +5,7 @@ use warnings;
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.0.2";
+my $scriptVersion = "2.0.3";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = "\cB"; # bold
