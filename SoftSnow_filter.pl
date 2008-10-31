@@ -84,7 +84,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.2.0";
+my $scriptVersion = "2.2.1";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr  2; # bold
@@ -216,6 +216,7 @@ my @filter_deny = (
 	q/brave soldier in the war/,
 );
 
+my $nlines      = 0; # how many lines we passed through filter
 my $nfiltered   = 0; # how many lines were filtered
 my $checklensum = 0; # how many rules to check to catch filtered
 my $nallow      = 0; # how many lines matched ALLOW rule
@@ -228,6 +229,9 @@ sub isFiltered {
 
 	#strip colour, underline, bold codes, etc.
 	$text = Xchat::strip_code($text);
+
+	# count all filtered lines;
+	$nlines++;
 
 	if ($use_filter_allow) {
 		foreach $regexp (@filter_allow) {
@@ -428,20 +432,27 @@ sub cmd_debug {
 	# %deny_idx = map { $filter_deny[$_] => $_ } 0..$#filter_deny;
 	@deny_idx{ @filter_deny } = (0..$#filter_deny);
 	Xchat::print("\n");
-	Xchat::print("filtered lines   = $nfiltered\n");
-	Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
-	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
-		Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
-		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
-		              $deny_idx{$rule}, slquote($rule));
+	Xchat::print("filtered lines   = $nfiltered out of $nlines\n");
+	if ($nlines > 0) {
+		Xchat::printf("filtered ratio   = %f (%5.1f%%)\n",
+		              $nfiltered/$nlines, 100.0*$nfiltered/$nlines);
 	}
-	if ($use_filter_allow) {
+	if ($nfiltered > 0) {
+		Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
+		foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
+			Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
+			              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
+			              $deny_idx{$rule}, slquote($rule));
+		}
+	}
+	if ($use_filter_allow || $nallow > 0) {
 		Xchat::print("allow matches    = $nallow\n");
 	}
 	Xchat::print("${B}FILTER DEBUG END ------------${B}\n");
 }
 
 sub cmd_clear_stats {
+	$nlines      = 0;
 	$nfiltered   = 0;
 	$checklensum = 0;
 	$nallow      = 0;
@@ -456,6 +467,8 @@ sub cmd_sort_by_stats {
 	@filter_deny =
 		sort { ($stats{$b} || 0) <=> ($stats{$a} || 0) }
 		@filter_deny;
+
+	Xchat::print("${B}FILTER:${B} DENY rules sorted by their use descending\n");
 }
 
 sub cmd_server_limit {
