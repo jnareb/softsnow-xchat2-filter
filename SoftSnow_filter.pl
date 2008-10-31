@@ -21,6 +21,9 @@ my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 my $filter_turned_on = 0;  # was default turned ON
 my $limit_to_server  = ''; # don't limit to server (host)
 my $use_filter_allow = 0;  # use overrides
+
+my $filtered_to_window = 1;
+my $filter_window = "(filtered)";
 ### end config ###
 
 my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
@@ -54,6 +57,10 @@ Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
              " For help: ${B}/FILTER HELP${B}\n");
 
+# GUI, windows, etc.
+if ($filtered_to_window) {
+	Xchat::command("QUERY $filter_window");
+}
 
 # information about (default) options used
 if ($filter_turned_on) {
@@ -144,11 +151,12 @@ sub privmsg_handler {
 	# $_[0] - array reference containing the IRC message or command
 	#         and arguments broken into words
 	# $_[1] - array reference containing the Nth word to the last word
-	#my ($address, $constant, $chan) = @{$_[0]};
+	my ($address, $msgtype, $channel) = @{$_[0]};
+	my ($nick, $user, $host) = ($address =~ /^:(.*?)!(.*?)@(.*)$/);
+
 	my $text = $_[1][3]; # Get server message
 
 	my $server = Xchat::get_info("host");
-
 
 	return Xchat::EAT_NONE unless $filter_turned_on;
 	if ($limit_to_server) {
@@ -157,8 +165,21 @@ sub privmsg_handler {
 
 	$text =~ s/^://;
 
-	return isFiltered($text) ? Xchat::EAT_ALL : Xchat::EAT_NONE;
+	if (isFiltered($text)) {
+		if (defined $nick && $filtered_to_window) {
+			#Xchat::print($text, $filter_window)
+
+			my $ctx = Xchat::get_context();
+			Xchat::set_context($filter_window);
+			Xchat::emit_print('Channel Message', $nick, $text);
+			Xchat::set_context($ctx);
+		}
+		#return Xchat::EAT_XCHAT;
+		return Xchat::EAT_ALL;
+	}
+	return Xchat::EAT_NONE;
 }
+
 
 # ------------------------------------------------------------
 
