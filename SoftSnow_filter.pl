@@ -37,6 +37,7 @@ ${B}/FILTER $command_list${B}
 /FILTER LOAD - loads the rules from the file, replacing existing rules
 /FILTER ADD <rule> - add rule at the end of the DENY rules
 /FILTER DELETE [<num>] - delete rule number <num>, or last rule
+/FILTER SHOW   [<num>] - show rule number <num>, or last rule
 /FILTER VERSION - prints the name and version of this script
 /FILTER without parameter is equivalent to /FILTER STATUS
 EOF
@@ -322,7 +323,7 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^DEL(?:ETE)$/i) {
 		my $num = $arg;
 		# strip whitespace
-		$num =~ s/^\s*(.*?)\s*$/$1/g;
+		$num =~ s/^\s*(.*?)\s*$/$1/g if $num;
 	SWITCH: {
 			unless ($num) {
 				Xchat::print("${B}FILTER:${B} deleting /".$filter_deny[-1]."/\n");
@@ -343,6 +344,14 @@ sub filter_command_handler {
 			delete_rule($num);
 			Xchat::print("${B}FILTER:${B} deleted successfully rule $num\n");
 		}
+
+	} elsif ($cmd =~ /^SHOW$/i) {
+		my $num = $arg;
+		# strip whitespace
+		$num =~ s/^\s*(.*?)\s*$/$1/g if $num;
+
+		Xchat::print("${B}FILTER:${B} ".(defined $num ? "[$num]" : "last").
+		             " rule /".$filter_deny[defined $num ? $num : -1]."/\n");
 
 	} elsif ($cmd =~ /^SAVE$/i) {
 		save_filter();
