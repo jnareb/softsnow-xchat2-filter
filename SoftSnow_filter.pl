@@ -367,4 +367,6 @@ sub filter_command_handler {
 	return 1;
 }
 
+Xchat::print("{B}$scriptName $scriptVersion${B} loaded\n");
+
 1;
