@@ -28,7 +28,7 @@ my $filtered_to_window = 0;
 my $filter_window = "(filtered)";
 ### end config ###
 
-my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|CLEARSTATS|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
+my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|CLEARSTATS|SORT|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
 my $filter_help = <<"EOF";
 ${B}/FILTER $filter_commands${B}
@@ -37,6 +37,7 @@ ${B}/FILTER $filter_commands${B}
 /FILTER STATUS - prints if filter is turned on, and with what limits
 /FILTER DEBUG - shows some info; used in debuggin the filter
 /FILTER CLEARSTATS - reset filter statistics
+/FILTER SORT - sort deny rules to have more often matched rules first
 /FILTER PRINT - prints all the rules
 /FILTER ALLOW - toggle use of ALLOW rules (before DENY).
 /FILTER SERVER - limits filtering to current server (host)
@@ -356,7 +357,15 @@ sub cmd_clear_stats {
 	$nallow      = 0;
 	%stats = ();
 
-	Xchat::print("${B}FILTER${B} stats cleared\n");
+	Xchat::print("${B}FILTER:${B} stats cleared\n");
+}
+
+sub cmd_sort_by_stats {
+	use sort 'stable';
+
+	@filter_deny =
+		sort { ($stats{$b} || 0) <=> ($stats{$a} || 0) }
+		@filter_deny;
 }
 
 sub cmd_server_limit {
@@ -495,6 +504,9 @@ sub filter_command_handler {
 
 	} elsif ($cmd =~ /^CLEARSTAT(?:S)?$/i) {
 		cmd_clear_stats();
+
+	} elsif ($cmd =~ /^SORT$/i) {
+		cmd_sort_by_stats();
 
 	} elsif ($cmd =~ /^(?:PRINT|LIST)$/i) {
 		cmd_print_rules();
