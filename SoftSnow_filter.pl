@@ -503,7 +503,7 @@ sub filterwindow_command_handler {
 			Xchat::print("$filter_window: host      => $ctx_info->{host}\n")
 				if defined $ctx_info->{'host'};
 			Xchat::print("$filter_window: channel   => $ctx_info->{channel}\n");
-			Xchat::print("$filter_window: server_id => $ctx_info->{id}\n");
+			Xchat::print("$filter_window: server_id => $ctx_info->{id}\n")
 				if defined $ctx_info->{'id'};
 		} else {
 			Xchat::print("$filter_window is ${B}closed${B}\n");
@@ -528,7 +528,7 @@ sub filterwindow_command_handler {
 		Xchat::print("${B}----- STOP LOGGING FILTERED CONTENTS -----${B}\n",
 		             $filter_window)
 			if $filtered_to_window;
-		Xchat::command("CLOSE", $FilterWindow)
+		Xchat::command("CLOSE", $filter_window)
 			if ($cmd =~ /^CLOSE$/i);
 
 		$filtered_to_window = 0;
