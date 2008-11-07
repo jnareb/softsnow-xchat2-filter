@@ -11,9 +11,9 @@ my $scriptName    = "SoftSnow XChat2 Filter";
 my $scriptVersion = "2.1.0";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
-my $B = "\cB"; # bold
-my $U = "\cU"; # underline
-my $C = "\cC"; # start of color sequence
+my $B = chr 2;  # bold
+my $U = chr 31; # underline
+my $C = chr 3;  # start of color sequence
 
 ### config ###
 my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
