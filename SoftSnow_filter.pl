@@ -160,40 +160,44 @@ sub privmsg_handler {
 # ------------------------------------------------------------
 
 sub save_filter {
-	open F, ">$filter_file"
-		or do {
-			Xchat::print("${B}FILTER:${B} Couldn't open file to save filter: $!\n");
-			return;
-		};
+	my $fh;
+
+	unless (open $fh, '>', $filter_file) {
+		Xchat::print("${B}FILTER:${B} Couldn't open file to save filter: $!\n");
+		return;
+	};
 
 	Xchat::print("${B}FILTER SAVE >$filter_file${B}\n");
 	foreach my $regexp (@filter_deny) {
 		Xchat::print("/".$regexp."/ saved\n");
-		print F $regexp."\n";
+		print $fh $regexp."\n";
 	}
 	Xchat::print("${B}FILTER SAVED ----------${B}\n");
-	close F 
-		or do {
-			Xchat::print("${B}FILTER:${B} Couldn't close file to save filter: $!\n");
-			return;
-		};
+
+	unless (close $fh) {
+		Xchat::print("${B}FILTER:${B} Couldn't close file to save filter: $!\n");
+		return;
+	};
+
 	return 1;
 }
 
 sub load_filter {
+	my $fh;
+
 	Xchat::print("${B}FILTER:${B} ...loading filter patterns\n");
-	open F, "<$filter_file"
-		or do {
-			Xchat::print("${B}FILTER:${B} Couldn't open file to load filter: $!\n");
-			return;
-		};
-	@filter_deny = <F>;
+	unless (open $fh, '<', $filter_file) {
+		Xchat::print("${B}FILTER:${B} Couldn't open file to load filter: $!\n");
+		return;
+	};
+
+	@filter_deny = <$fh>;
 	map (chomp, @filter_deny);
-	close F
-		or do {
-			Xchat::print("${B}FILTER:${B} Couldn't close file to load filter: $!\n");
-			return;
-		};
+
+	unless (close $fh) {
+		Xchat::print("${B}FILTER:${B} Couldn't close file to load filter: $!\n");
+		return;
+	};
 
 	Xchat::print("${B}FILTER DENY ----------${B}\n");
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
