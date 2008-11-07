@@ -3,9 +3,12 @@
 use strict;
 use warnings;
 
+use File::Temp qw(tempfile);
+use File::Copy qw(move);
+
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.0.4";
+my $scriptVersion = "2.0.5";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = "\cB"; # bold
@@ -160,10 +163,11 @@ sub privmsg_handler {
 # ------------------------------------------------------------
 
 sub save_filter {
-	my $fh;
+	my ($fh, $tmpfile) = tempfile($filter_file.'.XXXXXX', UNLINK=>1);
 
-	unless (open $fh, '>', $filter_file) {
-		Xchat::print("${B}FILTER:${B} Couldn't open file to save filter: $!\n");
+	unless ($fh) {
+		Xchat::print("${B}FILTER:${B} ".
+		             "Couldn't open temporary file $tmpfile to save filter: $!\n");
 		return;
 	};
 
@@ -172,12 +176,14 @@ sub save_filter {
 		Xchat::print("/".$regexp."/ saved\n");
 		print $fh $regexp."\n";
 	}
-	Xchat::print("${B}FILTER SAVED ----------${B}\n");
 
 	unless (close $fh) {
 		Xchat::print("${B}FILTER:${B} Couldn't close file to save filter: $!\n");
 		return;
 	};
+	#move($tmpfile, $filter_file);
+	rename($tmpfile, $filter_file);
+	Xchat::print("${B}FILTER SAVED ----------${B}\n");
 
 	return 1;
 }
