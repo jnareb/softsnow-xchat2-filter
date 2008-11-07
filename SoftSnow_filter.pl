@@ -147,11 +147,12 @@ sub privmsg_handler {
 	# $_[0] - array reference containing the IRC message or command
 	#         and arguments broken into words
 	# $_[1] - array reference containing the Nth word to the last word
-	#my ($address, $constant, $chan) = @{$_[0]};
+	my ($address, $msgtype, $channel) = @{$_[0]};
+	my ($nick, $user, $host) = ($address =~ /^:(.*?)!(.*?)@(.*)$/);
+
 	my $text = $_[1][3]; # Get server message
 
 	my $server = Xchat::get_info("host");
-
 
 	return Xchat::EAT_NONE unless $filter_turned_on;
 	if ($limit_to_server) {
@@ -161,11 +162,20 @@ sub privmsg_handler {
 	$text =~ s/^://;
 
 	if (isFiltered($text)) {
-		Xchat::print($text, $filter_window) if $filtered_to_window;
+		if (defined $nick && $filtered_to_window) {
+			#Xchat::print($text, $filter_window)
+
+			my $ctx = Xchat::get_context();
+			Xchat::set_context($filter_window);
+			Xchat::emit_print('Channel Message', $nick, $text);
+			Xchat::set_context($ctx);
+		}
+		#return Xchat::EAT_XCHAT;
 		return Xchat::EAT_ALL;
 	}
 	return Xchat::EAT_NONE;
 }
+
 
 # ------------------------------------------------------------
 
