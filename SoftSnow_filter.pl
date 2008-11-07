@@ -8,7 +8,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.1.0";
+my $scriptVersion = "2.1.1";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr 2;  # bold
@@ -48,11 +48,13 @@ ${B}/FILTER $filter_commands${B}
 /FILTER without parameter is equivalent to /FILTER STATUS
 EOF
 
-my $filterwindow_commands = 'ON|OFF';
+my $filterwindow_commands = 'ON|OFF|HELP|STATUS';
 
 my $filterwindow_help = <<"EOF";
 ${B}/FILTERWINDOW $filterwindow_commands${B}
 /FILTERWINDOW ON|OFF - turns saving filtered content to ${U}$filter_window${U}
+/FILTERWINDOW STATUS - prints if saving to ${U}$filter_window${U} is turned on
+/FILTERWINDOW HELP   - prints this help message
 EOF
 
 Xchat::register($scriptName, $scriptVersion, $scriptDescr);
@@ -470,8 +472,12 @@ sub filterwindow_command_handler {
 	my $cmd = $_[0][1]; # 1st parameter (after FILTER)
 	#my $arg = $_[1][2]; # 2nd word to the last word
 
-	if (!$cmd) {
-		Xchat::print("${B}${U}USAGE:${U} /FILTERWINDOW ON|OFF${B}\n");
+	if (!$cmd || $cmd =~ /^STATUS$/i) {
+		my $ctx = Xchat::find_context($filter_window);
+		Xchat::print(($filtered_to_window ? "Show" : "Don't show").
+		             " filtered content in ".
+		             (defined $ctx ? "open" : "closed").
+		             " window ${B}$filter_window${B}\n");
 
 	} elsif ($cmd =~ /^ON$/i) {
 		Xchat::command("QUERY $filter_window");
