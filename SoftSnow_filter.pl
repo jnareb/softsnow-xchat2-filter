@@ -8,7 +8,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.0.5";
+my $scriptVersion = "2.1.0";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = "\cB"; # bold
@@ -18,11 +18,11 @@ my $C = "\cC"; # start of color sequence
 ### config ###
 my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 
-my $filter_turned_on = 0;  # was default turned ON
-my $limit_to_server  = ''; # don't limit to server (host)
-my $use_filter_allow = 0;  # use overrides
+my $filter_turned_on = 0;  # is filter is turned on
+my $limit_to_server  = ''; # if true limit to given server (host)
+my $use_filter_allow = 0;  # use overrides (ALLOW before DENY)
 
-my $filtered_to_window = 1;
+my $filtered_to_window = 0;
 my $filter_window = "(filtered)";
 ### end config ###
 
