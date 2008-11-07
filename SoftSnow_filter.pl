@@ -163,7 +163,7 @@ sub save_filter {
 	open F, ">$filter_file"
 		or do {
 			Xchat::print("${B}FILTER:${B} Couldn't open file to save filter: $!\n");
-			return 1;
+			return;
 		};
 
 	Xchat::print("${B}FILTER SAVE >$filter_file${B}\n");
@@ -175,7 +175,7 @@ sub save_filter {
 	close F 
 		or do {
 			Xchat::print("${B}FILTER:${B} Couldn't close file to save filter: $!\n");
-			return 1;
+			return;
 		};
 	return 1;
 }
@@ -185,11 +185,15 @@ sub load_filter {
 	open F, "<$filter_file"
 		or do {
 			Xchat::print("${B}FILTER:${B} Couldn't open file to load filter: $!\n");
-			return 1;
+			return;
 		};
 	@filter_deny = <F>;
 	map (chomp, @filter_deny);
-	close F;
+	close F
+		or do {
+			Xchat::print("${B}FILTER:${B} Couldn't close file to load filter: $!\n");
+			return;
+		};
 
 	Xchat::print("${B}FILTER DENY ----------${B}\n");
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
