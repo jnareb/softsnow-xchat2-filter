@@ -26,10 +26,10 @@ my $filtered_to_window = 0;
 my $filter_window = "(filtered)";
 ### end config ###
 
-my $command_list = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
+my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
-my $scriptHelp = <<"EOF";
-${B}/FILTER $command_list${B}
+my $filter_help = <<"EOF";
+${B}/FILTER $filter_commands${B}
 /FILTER ON|OFF - turns filtering on/off
 /FILTER HELP - prints this help message
 /FILTER STATUS - prints if filter is turned on, and with what limits
@@ -51,7 +51,7 @@ EOF
 Xchat::register($scriptName, $scriptVersion, $scriptDescr);
 
 Xchat::hook_command("FILTER", \&filter_command_handler,
-                    { help_text => $scriptHelp });
+                    { help_text => $filter_help });
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
@@ -417,7 +417,7 @@ sub filter_command_handler {
 		cmd_server_limit(undef);
 
 	} elsif ($cmd =~ /^HELP$/i) {
-		Xchat::print($scriptHelp);
+		Xchat::print($filter_help);
 
 	} elsif ($cmd =~ /^VERSION$/i) {
 		cmd_version();
