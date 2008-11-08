@@ -50,11 +50,12 @@ ${B}/FILTER $filter_commands${B}
 /FILTER without parameter is equivalent to /FILTER STATUS
 EOF
 
-my $filterwindow_commands = 'ON|OFF|HELP|STATUS|DEBUG';
+my $filterwindow_commands = 'ON|OFF|CLOSE|HELP|STATUS|DEBUG';
 
 my $filterwindow_help = <<"EOF";
 ${B}/FILTERWINDOW $filterwindow_commands${B}
 /FILTERWINDOW ON|OFF - turns saving filtered content to ${U}$filter_window${U}
+/FILTERWINDOW CLOSE  - close ${U}$filter_window${U} (and turn off logging)
 /FILTERWINDOW STATUS - prints if saving to ${U}$filter_window${U} is turned on
 /FILTERWINDOW HELP   - prints this help message
 /FILTERWINDOW DEBUG  - shows some info; used in debugging this part of filter
@@ -523,14 +524,17 @@ sub filterwindow_command_handler {
 		$filtered_to_window = 1;
 		Xchat::print("Show filtered content in ${B}$filter_window${B}\n");
 
-	} elsif ($cmd =~ /^OFF$/i) {
+	} elsif ($cmd =~ /^(?:OFF|CLOSE)$/i) {
 		Xchat::print("${B}----- STOP LOGGING FILTERED CONTENTS -----${B}\n",
 		             $filter_window)
 			if $filtered_to_window;
-		#Xchat::command("CLOSE", $FilterWindow);
+		Xchat::command("CLOSE", $FilterWindow)
+			if ($cmd =~ /^CLOSE$/i);
 
 		$filtered_to_window = 0;
 		Xchat::print("Don't show filtered content in ${B}$filter_window${B}\n");
+		Xchat::print("${B}$filter_window${B} closed\n")
+			if ($cmd =~ /^CLOSE$/i);
 
 	} elsif ($cmd =~ /^HELP$/i) {
 		Xchat::print($filterwindow_help);
