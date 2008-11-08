@@ -8,7 +8,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.1.1";
+my $scriptVersion = "2.1.2";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr 2;  # bold
@@ -48,13 +48,14 @@ ${B}/FILTER $filter_commands${B}
 /FILTER without parameter is equivalent to /FILTER STATUS
 EOF
 
-my $filterwindow_commands = 'ON|OFF|HELP|STATUS';
+my $filterwindow_commands = 'ON|OFF|HELP|STATUS|DEBUG';
 
 my $filterwindow_help = <<"EOF";
 ${B}/FILTERWINDOW $filterwindow_commands${B}
 /FILTERWINDOW ON|OFF - turns saving filtered content to ${U}$filter_window${U}
 /FILTERWINDOW STATUS - prints if saving to ${U}$filter_window${U} is turned on
 /FILTERWINDOW HELP   - prints this help message
+/FILTERWINDOW DEBUG  - shows some info; used in debugging this part of filter
 EOF
 
 Xchat::register($scriptName, $scriptVersion, $scriptDescr);
@@ -471,13 +472,37 @@ sub filter_command_handler {
 sub filterwindow_command_handler {
 	my $cmd = $_[0][1]; # 1st parameter (after FILTER)
 	#my $arg = $_[1][2]; # 2nd word to the last word
+	my $ctx = Xchat::find_context($filter_window);
 
 	if (!$cmd || $cmd =~ /^STATUS$/i) {
-		my $ctx = Xchat::find_context($filter_window);
 		Xchat::print(($filtered_to_window ? "Show" : "Don't show").
 		             " filtered content in ".
 		             (defined $ctx ? "open" : "closed").
 		             " window ${B}$filter_window${B}\n");
+
+	} elsif ($cmd =~ /^DEBUG$/i) {
+		my $ctx_info = Xchat::context_info($ctx);
+		Xchat::print("${B}FILTERWINDOW DEBUG ----------${B}\n");
+		Xchat::print("filtered_to_window = $filtered_to_window\n");
+		Xchat::print("filter_window      = $filter_window\n");
+		if (defined $ctx) {
+			Xchat::print("$filter_window is ${B}open${B}\n");
+			Xchat::print("$filter_window: network   => $ctx_info->{network}\n")
+				if defined $ctx_info->{'network'};
+			Xchat::print("$filter_window: host      => $ctx_info->{host}\n")
+				if defined $ctx_info->{'host'};
+			Xchat::print("$filter_window: channel   => $ctx_info->{channel}\n");
+			Xchat::print("$filter_window: server_id => $ctx_info->{id}\n");
+				if defined $ctx_info->{'id'};
+		} else {
+			Xchat::print("$filter_window is ${B}closed${B}\n");
+		}
+		# requires XChat >= 2.8.2
+		#Xchat::print("'Channel Message' format:     ".
+		#             Xchat::get_info("event_text Channel Message")."\n");
+		#Xchat::print("'Channel Msg Hilight' format: ".
+		#             Xchat::get_info("event_text Channel Msg Hilight")."\n");
+		Xchat::print("${B}FILTERWINDOW DEBUG ----------${B}\n");
 
 	} elsif ($cmd =~ /^ON$/i) {
 		Xchat::command("QUERY $filter_window");
