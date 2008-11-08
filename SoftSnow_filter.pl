@@ -23,13 +23,12 @@ my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 my $filter_turned_on = 0;  # is filter is turned on
 my $limit_to_server  = ''; # if true limit to given server (host)
 my $use_filter_allow = 0;  # use overrides (ALLOW before DENY)
-my $adaptive_filter  = 1;  # move used (matched) rules earlier
 
 my $filtered_to_window = 0;
 my $filter_window = "(filtered)";
 ### end config ###
 
-my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
+my $filter_commands = 'ON|OFF|STATUS|SERVER|SERVERON|ALL|HELP|DEBUG|CLEARSTATS|PRINT|ALLOW|ADD|DELETE|SAVE|LOAD';
 
 my $filter_help = <<"EOF";
 ${B}/FILTER $filter_commands${B}
@@ -37,6 +36,7 @@ ${B}/FILTER $filter_commands${B}
 /FILTER HELP - prints this help message
 /FILTER STATUS - prints if filter is turned on, and with what limits
 /FILTER DEBUG - shows some info; used in debuggin the filter
+/FILTER CLEARSTATS - reset filter statistics
 /FILTER PRINT - prints all the rules
 /FILTER ALLOW - toggle use of ALLOW rules (before DENY).
 /FILTER SERVER - limits filtering to current server (host)
@@ -140,6 +140,8 @@ my @filter_deny = (
 );
 
 my $nfiltered = 0;
+my $nchecked  = 0;
+my $nallow    = 0;
 my %stats = ();
 
 # return 1 (true) if text given as argument is to be filtered out
@@ -152,29 +154,28 @@ sub isFiltered {
 
 	if ($use_filter_allow) {
 		foreach $regexp (@filter_allow) {
-			return 0 if ($text =~ /$regexp/);
+			if ($text =~ /$regexp/) {
+				$nallow++;
+				return 0;
+			}
 		}
 	}
 
-	if ($adaptive_filter) {
-		for (my $i = 0; $i < @filter_deny; $i++) {
-			if ($text =~ $filter_deny[$i]) {
-				my ($elem) = splice @filter_deny, $i, 1;
-				unshift @filter_deny, $elem;
+	my $nrules_checked = 0;
+	foreach $regexp (@filter_deny) {
+		$nrules_checked++;
 
-				$nfiltered++;
-				if (exists $stats{$elem}) {
-					$stats{$elem}++;
-				} else {
-					$stats{$elem} = 1;
-				}
-
-				return 1;
+		if ($text =~ /$regexp/) {
+			# filter statistic
+			$nfiltered++;
+			$nchecked += $nrules_checked;
+			if (exists $stats{$regexp}) {
+				$stats{$regexp}++;
+			} else {
+				$stats{$regexp} = 1;
 			}
-		}
-	} else {
-		foreach $regexp (@filter_deny) {
-			return 1 if ($text =~ /$regexp/);
+
+			return 1;
 		}
 	}
 
@@ -337,12 +338,25 @@ sub cmd_debug {
 	Xchat::printf("%3u %s rules\n", scalar(@filter_allow), "allow");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
 	Xchat::print("\n");
-	Xchat::print("nfiltered = $nfiltered\n");
+	Xchat::print("filtered lines   = $nfiltered\n");
+	Xchat::print("average to match = ".$nchecked/$nfiltered."\n");
 	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
-		Xchat::printf("%3u /%s/\n",
-		              $stats{$rule}, $rule);
+		Xchat::printf("%3u [%5.1f%%] /%s/\n",
+		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered, $rule);
+	}
+	if ($use_filter_allow) {
+		Xchat::print("allow matches    = $nallow\n");
 	}
 	Xchat::print("${B}FILTER DEBUG ----------${B}\n");
+}
+
+sub cmd_clear_stats {
+	$nfiltered = 0;
+	$nchecked  = 0;
+	$nallow    = 0;
+	%stats = ();
+
+	Xchat::print("${B}FILTER${B} stats cleared\n");
 }
 
 sub cmd_server_limit {
@@ -478,6 +492,9 @@ sub filter_command_handler {
 
 	} elsif ($cmd =~ /^DEBUG$/i || $cmd =~ /^INFO$/i) {
 		cmd_debug();
+
+	} elsif ($cmd =~ /^CLEARSTAT(?:S)?$/i) {
+		cmd_clear_stats();
 
 	} elsif ($cmd =~ /^(?:PRINT|LIST)$/i) {
 		cmd_print_rules();
