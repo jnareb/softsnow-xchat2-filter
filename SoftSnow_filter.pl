@@ -170,10 +170,18 @@ sub privmsg_handler {
 
 	my $server = Xchat::get_info("host");
 
+	#-- EXAMPLE RAW COMMANDS: --
+	#chanmsg: [':epitaph!~epitaph@CPE00a0241892b7-CM014480119187.cpe.net.cable.rogers.com', 'PRIVMSG', '#werd', ':mah', 'script', 'is', 'doing', 'stuff.']
+	#action:  [':rlz!railz@bzq-199-176.red.bezeqint.net', 'PRIVMSG', '#werd', ':\x01ACTION', 'hugs', 'elhaym', '\x01']
+	#private: [':olene!oqd@girli.sh', 'PRIVMSG', 'epinoodle', ':hey']
+
+
 	return Xchat::EAT_NONE unless $filter_turned_on;
 	if ($limit_to_server) {
 		return Xchat::EAT_NONE unless $server eq $limit_to_server;
 	}
+	# do not filter out private messages
+	return Xchat::EAT_NONE unless ($_[0][2] =~ /^#/);
 
 	$text =~ s/^://;
 
