@@ -183,7 +183,7 @@ sub privmsg_handler {
 		return Xchat::EAT_NONE unless $server eq $limit_to_server;
 	}
 	# do not filter out private messages
-	return Xchat::EAT_NONE unless ($_[0][2] =~ /^#/);
+	return Xchat::EAT_NONE unless ($channel =~ /^#/);
 
 	$text =~ s/^://;
 
