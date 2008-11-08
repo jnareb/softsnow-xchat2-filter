@@ -23,6 +23,7 @@ my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 my $filter_turned_on = 0;  # is filter is turned on
 my $limit_to_server  = ''; # if true limit to given server (host)
 my $use_filter_allow = 0;  # use overrides (ALLOW before DENY)
+my $adaptive_filter  = 1;  # move used (matched) rules earlier
 
 my $filtered_to_window = 0;
 my $filter_window = "(filtered)";
@@ -138,6 +139,9 @@ my @filter_deny = (
 	q/brave soldier in the war/,
 );
 
+my $nfiltered = 0;
+my %stats = ();
+
 # return 1 (true) if text given as argument is to be filtered out
 sub isFiltered {
 	my $text = shift;
@@ -152,8 +156,26 @@ sub isFiltered {
 		}
 	}
 
-	foreach $regexp (@filter_deny) {
-		return 1 if ($text =~ /$regexp/);
+	if ($adaptive_filter) {
+		for (my $i = 0; $i < @filter_deny; $i++) {
+			if ($text =~ $filter_deny[$i]) {
+				my ($elem) = splice @filter_deny, $i, 1;
+				unshift @filter_deny, $elem;
+
+				$nfiltered++;
+				if (exists $stats{$elem}) {
+					$stats{$elem}++;
+				} else {
+					$stats{$elem} = 1;
+				}
+
+				return 1;
+			}
+		}
+	} else {
+		foreach $regexp (@filter_deny) {
+			return 1 if ($text =~ /$regexp/);
+		}
 	}
 
 	return 0;
@@ -314,6 +336,12 @@ sub cmd_debug {
 	Xchat::print("\n");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_allow), "allow");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
+	Xchat::print("\n");
+	Xchat::print("nfiltered = $nfiltered\n");
+	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
+		Xchat::printf("%3u /%s/\n",
+		              $stats{$rule}, $rule);
+	}
 	Xchat::print("${B}FILTER DEBUG ----------${B}\n");
 }
 
