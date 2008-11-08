@@ -47,6 +47,7 @@ ${B}/FILTER $filter_commands${B}
 /FILTER DELETE [<num>] - delete rule number <num>, or last rule
 /FILTER SHOW   [<num>] - show rule number <num>, or last rule
 /FILTER VERSION - prints the name and version of this script
+/FILTER WINDOW <arg>... - same as /FILTERWINDOW <arg>...
 /FILTER without parameter is equivalent to /FILTER STATUS
 EOF
 
@@ -59,6 +60,7 @@ ${B}/FILTERWINDOW $filterwindow_commands${B}
 /FILTERWINDOW STATUS - prints if saving to ${U}$filter_window${U} is turned on
 /FILTERWINDOW HELP   - prints this help message
 /FILTERWINDOW DEBUG  - shows some info; used in debugging this part of filter
+/FILTERWINDOW without parameter is equivalent to /FILTERWINDOW STATUS
 EOF
 
 Xchat::register($scriptName, $scriptVersion, $scriptDescr);
@@ -473,6 +475,13 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^(RE)?LOAD$/i) {
 		load_filter();
 		Xchat::print("${B}FILTER:${B} loaded DENY rules from $filter_file\n");
+
+	} elsif ($cmd =~ /^WINDOW$/i) {
+		return filterwindow_command_handler(
+			[ 'FILTERWINDOW',          @{$_[0]}[2..$#{$_[0]}] ],
+			[ "FILTERWINDOW $_[1][2]", @{$_[1]}[2..$#{$_[1]}] ],
+			$_[2]
+		);
 
 	} else {
 		Xchat::print("Unknown command ${B}/FILTER $_[1][1]${B}\n") if $cmd;
