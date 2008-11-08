@@ -541,7 +541,7 @@ sub filterwindow_command_handler {
 
 	} else {
 		Xchat::print("Unknown command ${B}/FILTERWINDOW $_[1][1]${B}\n") if $cmd;
-		Xchat::print("${B}${U}USAGE:${U} /FILTERWINDOW ON|OFF${B}\n");
+		Xchat::print("${B}${U}USAGE:${U} /FILTERWINDOW $filterwindow_commands${B}\n");
 	}
 
 	return 1;
