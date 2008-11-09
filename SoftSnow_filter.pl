@@ -65,7 +65,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.1.3";
+my $scriptVersion = "2.1.4";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr  2; # bold
@@ -381,8 +381,12 @@ sub cmd_server_limit {
 		# adding limiting to given (single) server
 		if ($limit_to_server) {
 			Xchat::print("${B}FILTER:${B} Changing server from $limit_to_server to $server\n");
+			Xchat::print("[FILTER LIMITED TO SERVER ${B}$server${B} (WAS TO $limit_to_server)]",
+			             $filter_window);
 		} else {
 			Xchat::print("${B}FILTER:${B} Limiting filtering to server $server\n");
+			Xchat::print("[FILTER LIMITED TO SERVER ${B}$server${B} (WAS UNLIMITED)]",
+			             $filter_window);
 		}
 		$limit_to_server = $server;
 
@@ -390,6 +394,8 @@ sub cmd_server_limit {
 		# removing limiting to server
 		if ($limit_to_server) {
 			Xchat::print("${B}FILTER:${B} Removing limit to server $limit_to_server\n");
+			Xchat::print("[FILTER ${B}NOT LIMITED${B} TO SERVER (WAS TO $limit_to_server)]",
+			             $filter_window);
 		}
 		$limit_to_server = '';
 
@@ -481,10 +487,14 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^ON$/i) {
 		$filter_turned_on = 1;
 		Xchat::print("Filter turned ${B}ON${B}\n");
+		Xchat::print("[FILTER TURNED ${B}ON${B}]",
+		             $filter_window);
 
 	} elsif ($cmd =~ /^OFF$/i) {
 		$filter_turned_on = 0;
 		Xchat::print("Filter turned ${B}OFF${B}\n");
+		Xchat::print("[FILTER TURNED ${B}OFF${B}]",
+		             $filter_window);
 
 	} elsif ($cmd =~ /^SERVER$/i) {
 		cmd_server_limit($server);
@@ -492,6 +502,9 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^SERVERON$/i) {
 		cmd_server_limit($server);
 
+		Xchat::print("[FILTER TURNED ${B}ON${B}]",
+		             $filter_window)
+			if (!$filter_turned_on);
 		$filter_turned_on = 1;
 		Xchat::print("Filter turned ${B}ON${B}\n");
 
