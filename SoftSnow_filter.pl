@@ -139,10 +139,10 @@ my @filter_deny = (
 	q/brave soldier in the war/,
 );
 
-my $nfiltered = 0;
-my $nchecked  = 0;
-my $nallow    = 0;
-my %stats = ();
+my $nfiltered   = 0; # how many lines were filtered
+my $checklensum = 0; # how many rules to check to catch filtered
+my $nallow      = 0; # how many lines matched ALLOW rule
+my %stats = (); # histogram: how many times given rule was used
 
 # return 1 (true) if text given as argument is to be filtered out
 sub isFiltered {
@@ -168,7 +168,7 @@ sub isFiltered {
 		if ($text =~ /$regexp/) {
 			# filter statistic
 			$nfiltered++;
-			$nchecked += $nrules_checked;
+			$checklensum += $nrules_checked;
 			if (exists $stats{$regexp}) {
 				$stats{$regexp}++;
 			} else {
@@ -339,7 +339,7 @@ sub cmd_debug {
 	Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
 	Xchat::print("\n");
 	Xchat::print("filtered lines   = $nfiltered\n");
-	Xchat::print("average to match = ".$nchecked/$nfiltered."\n");
+	Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
 	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
 		Xchat::printf("%3u [%5.1f%%] /%s/\n",
 		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered, $rule);
@@ -351,9 +351,9 @@ sub cmd_debug {
 }
 
 sub cmd_clear_stats {
-	$nfiltered = 0;
-	$nchecked  = 0;
-	$nallow    = 0;
+	$nfiltered   = 0;
+	$checklensum = 0;
+	$nallow      = 0;
 	%stats = ();
 
 	Xchat::print("${B}FILTER${B} stats cleared\n");
