@@ -1,5 +1,62 @@
 #!/usr/bin/perl
 
+# SoftSnow XChat2 filter script
+#
+## Summary:
+##
+# Filter out fileserver announcements and SPAM on IRC
+#
+## Description:
+##
+# This script started as an upgrade to the SoftSnow filter script
+# from http://dukelupus.pri.ee/softsnow/ircscripts/scripts.shtml
+# It borrows some ideas from filter-ebooks (#ebooks Xchat2 filter
+# script) by KiBo, and its older version by RJVJR, mainly moving
+# from the old IRC:: interface to the new Xchat2 API.
+#
+# Tested on #ebooks channel on IRCHighWay (irc.irchighway.net)
+#
+## Install:
+##
+# Place SoftSnow_filter.pl in your ~/.xchat directory
+#
+## URL (repositories):
+# * http://github.com/jnareb/softsnow-xchat2-filter
+# * http://gitorious.org/projects/softsnow-xchat2-filter
+# * http://repo.or.cz/w/softsnow_xchat2_filter.git
+#
+## ChangeLog (main points only):
+##
+# Version 1.2:
+# * Original version of SoftSnow filter this one is based on
+# Version 1.2.2:
+# * Add /FILTER command, to turn filter off and on, and to limit
+#   filtering to current IRC server only
+# Version 1.2.3:
+# * Allow to save and load filter rules from file (UNIX only)
+# * Add ALLOW rules, for example to show '@search' while filtering '@'
+# Version 2.0.1:
+# * Use new XChat2 API (Xchat:: instead of IRC::)
+# Version 2.0.5:
+# * More secure saving rules to a file (always save whole file)
+# Version 2.1.0:
+# * Allow printing (logging) filtered content to '(filtered)' window
+#   via 'Channel Message' text event, with nick of sender
+# Version 2.1.3:
+# * /FILTERWINDOW command to control and query of logging filtered
+#   contents to separate '(filtered)' window
+#
+## TODO:
+##
+# * Add GUI and MENU (would require XChat >= 2.4.5)
+# * Change format of saved rules to 'm/.../' or 'qr{...}';
+#   see YAML (YAML::Types) and Data::Dumper code and output
+# * Save and read config together with filter rules
+# * Read default config and rules from __DATA__, add reset
+# * Save filter rules usage statistics
+# * Import filter rules from filter-ebooks3.3FINAL script
+# * Limit filter to specified channels (or all channels)
+
 use strict;
 use warnings;
 
