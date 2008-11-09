@@ -10,6 +10,7 @@
 ##
 # This script started as an upgrade to the SoftSnow filter script
 # from http://dukelupus.pri.ee/softsnow/ircscripts/scripts.shtml
+#   or http://softsnow.griffin3.com/ircscripts/scripts.shtml
 # (originally http://www.softsnow.biz/softsnow_filter/filter.shtml)
 # It borrows some ideas from filter-ebooks (#ebooks Xchat2 filter
 # script) by KiBo, and its older version by RJVJR, mainly moving
