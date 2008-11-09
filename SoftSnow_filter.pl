@@ -10,6 +10,7 @@
 ##
 # This script started as an upgrade to the SoftSnow filter script
 # from http://dukelupus.pri.ee/softsnow/ircscripts/scripts.shtml
+# (originally http://www.softsnow.biz/softsnow_filter/filter.shtml)
 # It borrows some ideas from filter-ebooks (#ebooks Xchat2 filter
 # script) by KiBo, and its older version by RJVJR, mainly moving
 # from the old IRC:: interface to the new Xchat2 API.
@@ -56,6 +57,14 @@
 # * Save filter rules usage statistics
 # * Import filter rules from filter-ebooks3.3FINAL script
 # * Limit filter to specified channels (or all channels)
+# * Filter private SPAM (SPAM sent to you, but not other)
+# * ? Don't accept DCC from users not on common channel 
+# * ? Do not accept files, or dangerous files, from regular users
+# * Color nicks in '(filtered)' window according to matched rule
+# * Add command to clear '(filtered)' window
+# * Add option to strip codes from logged filtered lines
+# * Limit number of lines in '(filtered)' window
+# * ? Perhaps something about '@find' and '!find' results?
 
 use strict;
 use warnings;
