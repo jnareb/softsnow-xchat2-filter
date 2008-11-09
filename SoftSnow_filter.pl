@@ -71,8 +71,8 @@ Xchat::hook_command("FILTERWINDOW", \&filterwindow_command_handler,
                     { help_text => $filterwindow_help });
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
-Xchat::print("Loading ${B}$scriptName $scriptVersion${B}\n".
-             " For help: ${B}/FILTER HELP${B}\n");
+Xchat::print("Loading ${B}$scriptName $scriptVersion${B}...\n");
+
 
 # GUI, windows, etc.
 if ($filtered_to_window) {
@@ -332,7 +332,7 @@ sub cmd_server_limit {
 	} else {
 		# removing limiting to server
 		if ($limit_to_server) {
-			Xchat::print("Filter: Removing limit to server $limit_to_server\n");
+			Xchat::print("${B}FILTER:${B} Removing limit to server $limit_to_server\n");
 		}
 		$limit_to_server = '';
 
@@ -531,7 +531,7 @@ sub filterwindow_command_handler {
 			if !$filtered_to_window;
 
 		$filtered_to_window = 1;
-		Xchat::print("Show filtered content in ${B}$filter_window${B}\n");
+		Xchat::print("Filter shows filtered content in ${B}$filter_window${B}\n");
 
 	} elsif ($cmd =~ /^(?:OFF|CLOSE)$/i) {
 		Xchat::print("${B}----- STOP LOGGING FILTERED CONTENTS -----${B}\n",
@@ -541,8 +541,8 @@ sub filterwindow_command_handler {
 			if ($cmd =~ /^CLOSE$/i);
 
 		$filtered_to_window = 0;
-		Xchat::print("Don't show filtered content in ${B}$filter_window${B}\n");
-		Xchat::print("${B}$filter_window${B} closed\n")
+		Xchat::print("Filter doesn't show filtered content in ${B}$filter_window${B}\n");
+		Xchat::print("${B}FILTER:${B} ${B}$filter_window${B} closed\n")
 			if ($cmd =~ /^CLOSE$/i);
 
 	} elsif ($cmd =~ /^HELP$/i) {
@@ -560,6 +560,7 @@ sub filterwindow_command_handler {
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ----------------------------------------------------------------------
 
-Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n");
+Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n",
+             " For help: ${B}/FILTER HELP${B}\n");
 
 1;
