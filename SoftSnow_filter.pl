@@ -353,11 +353,13 @@ sub cmd_debug {
 	@deny_idx{ @filter_deny } = (0..$#filter_deny);
 	Xchat::print("\n");
 	Xchat::print("filtered lines   = $nfiltered\n");
-	Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
-	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
-		Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
-		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
-		              $deny_idx{$rule}, slquote($rule));
+	if ($nfiltered > 0) {
+		Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
+		foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
+			Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
+			              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
+			              $deny_idx{$rule}, slquote($rule));
+		}
 	}
 	if ($use_filter_allow) {
 		Xchat::print("allow matches    = $nallow\n");
