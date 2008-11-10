@@ -361,7 +361,7 @@ sub cmd_debug {
 			              $deny_idx{$rule}, slquote($rule));
 		}
 	}
-	if ($use_filter_allow) {
+	if ($use_filter_allow || $nallow > 0) {
 		Xchat::print("allow matches    = $nallow\n");
 	}
 	Xchat::print("${B}FILTER DEBUG ----------${B}\n");
