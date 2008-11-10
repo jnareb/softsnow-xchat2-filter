@@ -351,11 +351,11 @@ sub load_filter {
 		return;
 	};
 
-	Xchat::print("${B}FILTER DENY ----------${B}\n");
+	Xchat::print("${B}FILTER DENY START ----------${B}\n");
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
 		Xchat::print(" [$i]: /".$filter_deny[$i]."/\n");
 	}
-	Xchat::print("${B}FILTER DENY ----------${B}\n");
+	Xchat::print("${B}FILTER DENY END ------------${B}\n");
 }
 
 sub add_rule ( $ ) {
@@ -413,7 +413,7 @@ sub cmd_status {
 }
 
 sub cmd_debug {
-	Xchat::print("${B}FILTER DEBUG ----------${B}\n");
+	Xchat::print("${B}FILTER DEBUG START ----------${B}\n");
 	Xchat::print("Channel:   ".Xchat::get_info("channel")."\n");
 	Xchat::print("Host:      ".Xchat::get_info("host")."\n");
 	Xchat::print("Server:    ".Xchat::get_info("server")."\n");
@@ -438,7 +438,7 @@ sub cmd_debug {
 	if ($use_filter_allow) {
 		Xchat::print("allow matches    = $nallow\n");
 	}
-	Xchat::print("${B}FILTER DEBUG ----------${B}\n");
+	Xchat::print("${B}FILTER DEBUG END ------------${B}\n");
 }
 
 sub cmd_clear_stats {
@@ -487,7 +487,7 @@ sub cmd_server_limit {
 }
 
 sub cmd_print_rules {
-	Xchat::print("${B}FILTER PRINT ----------${B}\n");
+	Xchat::print("${B}FILTER PRINT START ----------${B}\n");
 	Xchat::print("${B}ALLOW${B}".($use_filter_allow ? ' (on)' : ' (off)')."\n");
 
 	for (my $i = 0; $i <= $#filter_allow; $i++) {
@@ -497,7 +497,7 @@ sub cmd_print_rules {
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
 		Xchat::print("[$i]: /".$filter_deny[$i]."/\n");
 	}
-	Xchat::print("${B}FILTER PRINT ----------${B}\n");
+	Xchat::print("${B}FILTER PRINT END ------------${B}\n");
 }
 
 sub cmd_add_rule {
@@ -662,7 +662,7 @@ sub filterwindow_command_handler {
 
 	} elsif ($cmd =~ /^DEBUG$/i) {
 		my $ctx_info = Xchat::context_info($ctx);
-		Xchat::print("${B}FILTERWINDOW DEBUG ----------${B}\n");
+		Xchat::print("${B}FILTERWINDOW DEBUG START ----------${B}\n");
 		Xchat::print("filtered_to_window = $filtered_to_window\n");
 		Xchat::print("filter_window      = $filter_window\n");
 		if (defined $ctx) {
@@ -682,7 +682,7 @@ sub filterwindow_command_handler {
 		#             Xchat::get_info("event_text Channel Message")."\n");
 		#Xchat::print("'Channel Msg Hilight' format: ".
 		#             Xchat::get_info("event_text Channel Msg Hilight")."\n");
-		Xchat::print("${B}FILTERWINDOW DEBUG ----------${B}\n");
+		Xchat::print("${B}FILTERWINDOW DEBUG END ------------${B}\n");
 
 	} elsif ($cmd =~ /^ON$/i) {
 		Xchat::command("QUERY $filter_window");
@@ -694,7 +694,7 @@ sub filterwindow_command_handler {
 		Xchat::print("Filter shows filtered content in ${B}$filter_window${B}\n");
 
 	} elsif ($cmd =~ /^(?:OFF|CLOSE)$/i) {
-		Xchat::print("${B}----- STOP LOGGING FILTERED CONTENTS -----${B}\n",
+		Xchat::print("${B}----- STOP LOGGING FILTERED CONTENTS ------${B}\n",
 		             $filter_window)
 			if $filtered_to_window;
 		Xchat::command("CLOSE", $filter_window)
