@@ -382,6 +382,8 @@ sub cmd_sort_by_stats {
 	@filter_deny =
 		sort { ($stats{$b} || 0) <=> ($stats{$a} || 0) }
 		@filter_deny;
+
+	Xchat::print("${B}FILTER:${B} DENY rules sorted by their use descending\n");
 }
 
 sub cmd_server_limit {
