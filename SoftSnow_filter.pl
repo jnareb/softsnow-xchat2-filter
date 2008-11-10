@@ -295,6 +295,14 @@ sub delete_rule ( $ ) {
 	splice @filter_deny, $num, 1;
 }
 
+sub slquote {
+	my $text = shift;
+
+	$text =~ s!([\/])!\$1!g;
+
+	return $text;
+}
+
 # ============================================================
 # ------------------------------------------------------------
 # ............................................................
@@ -335,15 +343,21 @@ sub cmd_debug {
 	Xchat::print("Server:    ".Xchat::get_info("server")."\n");
 	Xchat::print("Server Id: ".Xchat::get_info("id")."\n");
 	Xchat::print("Network:   ".Xchat::get_info("network")."\n");
+
 	Xchat::print("\n");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_allow), "allow");
 	Xchat::printf("%3u %s rules\n", scalar(@filter_deny),  "deny");
+
+	my %deny_idx = ();
+	# %deny_idx = map { $filter_deny[$_] => $_ } 0..$#filter_deny;
+	@deny_idx{ @filter_deny } = (0..$#filter_deny);
 	Xchat::print("\n");
 	Xchat::print("filtered lines   = $nfiltered\n");
 	Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
 	foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
-		Xchat::printf("%3u [%5.1f%%] /%s/\n",
-		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered, $rule);
+		Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
+		              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
+		              $deny_idx{$rule}, slquote($rule));
 	}
 	if ($use_filter_allow) {
 		Xchat::print("allow matches    = $nallow\n");
