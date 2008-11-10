@@ -140,6 +140,7 @@ my @filter_deny = (
 	q/brave soldier in the war/,
 );
 
+my $nlines      = 0; # how many lines we passed through filter
 my $nfiltered   = 0; # how many lines were filtered
 my $checklensum = 0; # how many rules to check to catch filtered
 my $nallow      = 0; # how many lines matched ALLOW rule
@@ -152,6 +153,9 @@ sub isFiltered {
 
 	#strip colour, underline, bold codes, etc.
 	$text = Xchat::strip_code($text);
+
+	# count all filtered lines;
+	$nlines++;
 
 	if ($use_filter_allow) {
 		foreach $regexp (@filter_allow) {
@@ -352,7 +356,11 @@ sub cmd_debug {
 	# %deny_idx = map { $filter_deny[$_] => $_ } 0..$#filter_deny;
 	@deny_idx{ @filter_deny } = (0..$#filter_deny);
 	Xchat::print("\n");
-	Xchat::print("filtered lines   = $nfiltered\n");
+	Xchat::print("filtered lines   = $nfiltered out of $nlines\n");
+	if ($nlines > 0) {
+		Xchat::printf("filtered ratio   = %f (%5.1f%%)\n",
+		              $nfiltered/$nlines, 100.0*$nfiltered/$nlines);
+	}
 	if ($nfiltered > 0) {
 		Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
 		foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
@@ -368,6 +376,7 @@ sub cmd_debug {
 }
 
 sub cmd_clear_stats {
+	$nlines      = 0;
 	$nfiltered   = 0;
 	$checklensum = 0;
 	$nallow      = 0;
