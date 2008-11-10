@@ -18,6 +18,12 @@
 #
 # Tested on #ebooks channel on IRCHighWay (irc.irchighway.net)
 #
+# Use '/FILTER HELP' (or '/HELP FILTER') to list all commands.
+# By default filter is turned off: use '/FILTER ON' to start
+# filtering contents, use '/FILTERWINDOW ON' to log filtered
+# lines to '(filtered)' window.
+#
+#
 ## Install:
 ##
 # Place SoftSnow_filter.pl in your ~/.xchat directory
