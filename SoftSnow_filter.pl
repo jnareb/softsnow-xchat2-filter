@@ -54,6 +54,7 @@
 # * Change format of saved rules to 'm/.../' or 'qr{...}';
 #   see YAML (YAML::Types) and Data::Dumper code and output
 # * Save and read config together with filter rules
+# * Autosave (and autoread) configuration, if turned on
 # * Read default config and rules from __DATA__, add reset
 # * Save filter rules usage statistics
 # * Import filter rules from filter-ebooks3.3FINAL script
@@ -66,6 +67,8 @@
 # * Add option to strip codes from logged filtered lines
 # * Limit number of lines in '(filtered)' window
 # * ? Perhaps something about '@find' and '!find' results?
+# * Triggers, for example automatic /dccallow + resubmit,
+#   if request fails (due to double '.' in filename, etc.)
 
 use strict;
 use warnings;
