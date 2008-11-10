@@ -236,7 +236,7 @@ sub privmsg_handler {
 	#         and arguments broken into words
 	# $_[1] - array reference containing the Nth word to the last word
 	my ($address, $msgtype, $channel) = @{$_[0]};
-	my ($nick, $user, $host) = ($address =~ /^:(.*?)!(.*?)@(.*)$/);
+	my ($nick, $user, $host) = ($address =~ /^:([^!]*)!([^@]+)@(.*)$/);
 
 	my $text = $_[1][3]; # Get server message
 
