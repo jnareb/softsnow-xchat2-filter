@@ -53,6 +53,8 @@
 # Version 2.1.3:
 # * /FILTERWINDOW command to control and query of logging filtered
 #   contents to separate '(filtered)' window
+# Version 2.2.0:
+# * /FILTER DEBUG shows now some filter statistics
 #
 ## TODO:
 ##
