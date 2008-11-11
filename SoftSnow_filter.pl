@@ -83,10 +83,10 @@ use warnings;
 
 use File::Temp qw(tempfile);
 use File::Copy qw(move);
-
+use Text::Balanced qw(extract_quotelike);
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.2.1";
+my $scriptVersion = "2.2.2-pre1";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr  2; # bold
@@ -173,49 +173,144 @@ if ($use_filter_allow) {
 }
 
 # ------------------------------------------------------------
+# Subroutines translating between regexps and stringifications
+# qr/<sth>/i <-> q/(?i)<sth>/ <-> '(?i-xsm:<sth>)'
+# see YAML::Types and Data::Dumper code and output
+
+use constant _QR_TYPES => {
+	'' => sub { qr{$_[0]} },
+	x  => sub { qr{$_[0]}x },
+	i  => sub { qr{$_[0]}i },
+	ix => sub { qr{$_[0]}ix },
+};
+
+# converts '(?i-xsm:re)' or '(?i)re' to qr{re}i, etc.
+# modified code based on 'regexp' from YAML/Types.pm
+sub stringify_to_re {
+	my $text = shift;
+
+	return qr{$text} unless $text =~
+		/(?:
+			# clustering, with flag modifiers
+			# e.g. (?i-xsm:^abra . kadabra)
+			^\(\?([\-xism]*):(.*)\)\z
+			|
+			# pattern-match modifier
+			# e.g. (?i)^abra . kadabra
+			^\(\?([xi]+)\)(.*)\z
+		)/sx;
+	my ($flags, $re) = ($1 || $3, defined $2 ? $2 : $4);
+	$flags =~ s/-.*//;
+	$flags = 'ix' if $flags eq 'xi';
+
+	my $sub = _QR_TYPES->{$flags} || sub { qr{$_[0]} };
+	my $qr = &$sub($re);
+
+	return $qr;
+}
+
+# converts 'qr/re/i' or 'm/re/i' to qr{re}i, etc.
+sub str_repr_to_re {
+	my $str = shift;
+	my ($op,$re,$flags) = (extract_quotelike($str))[3,5,10];
+	return qr{$str} unless (defined $op && $op =~ /^(?:qr|m)$/ && $re);
+
+	my $sub = _QR_TYPES->{$flags} || sub { qr{$_[0]} };
+	my $qr = &$sub($re);
+
+	return $qr;
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+# return regexp string in the 'qr/<regexp>/<flags>' form
+sub re_to_str_repr {
+	my $regexp = shift;
+	return $regexp unless (ref($regexp) eq 'Regexp');
+
+	my $out = "$regexp";     # stringification
+	$out =~ s,([\/]),\\$1,g; # quote delimiters and quoting char
+	return "qr/$out/" unless $out =~ /^\(\?([\-xism]*):(.*)\)\z/s;
+	my ($flags, $re) = ($1, $2);
+	$flags =~ s/-.*//;
+	return "qr/$re/$flags";
+}
+
+# return regexp string in the old '(?<flags>)<regexp>' form
+sub re_to_stringify_mod {
+	my $regexp = shift;
+	return $regexp unless (ref($regexp) eq 'Regexp');
+
+	my $out = "$regexp";     # stringification
+	#$out =~ s,[\],\\,g;     # quote quoting char
+	return $out unless $out =~ /^\(\?([\-xism]*):(.*)\)\z/s;
+	my ($flags, $re) = ($1, $2);
+	$flags =~ s/-.*//;
+	return $flags ? "(?$flags)$re" : $re;
+}
+
+# return regexp string in canonical '(?i-xsm:<regexp>)' form
+sub re_to_stringify {
+	return "$_[0]";
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+# converts '(?i-xsm:re)' (stringification) to 'qr/re/i'
+sub re_string_to_str_repr {
+	my $text = shift;
+
+	return $text unless $text =~ /^\(\?([\-xism]*):(.*)\)\z/sx;
+	my ($flags, $re) = ($1, $2);
+	$flags =~ s/-.*//;
+
+	return "qr/$re/$flags";
+}
+
+# ------------------------------------------------------------
 
 my @filter_allow = (
-	q/^\@search\s/,
+	qr/^\@search\s/,
 );
 
 my @filter_deny = (
-	q/\@/,
-	q/^\s*\!/,
-	q/slot\(s\)/,
-	#q/~&~&~/,
+	qr/\@/,
+	qr/^\s*\!/,
+	qr/slot\(s\)/,
+	#qr/~&~&~/,
 
 	#xdcc
-	q/^\#\d+/,
+	qr/^\#\d+/,
 
 	#fserves
-	q/(?i)fserve.*trigger/,
-	q/(?i)trigger.*\!/,
-	q/(?i)trigger.*\/ctcp/,
-	q/(?i)type\:\s*\!/,
-	q/(?i)file server online/,
+	qr/fserve.*trigger/i,
+	qr/trigger.*\!/i,
+	qr/trigger.*\/ctcp/i,
+	qr/type\:\s*\!/i,
+	qr/file server online/i,
 
 	#ftps
-	q/(?i)ftp.*l\/p/,
+	qr/ftp.*l\/p/i,
 
 	#CTCPs
-	q/SLOTS/,
-	q/MP3 /,
+	qr/SLOTS/,
+	qr/MP3 /,
 
 	#messages for when a file is received/failed to receive
-	q/(?i)DEFINITELY had the right stuff to get/,
-	q/(?i)has just received/,
-	q/(?i)I have just received/,
+	qr/DEFINITELY had the right stuff to get/i,
+	qr/has just received/i,
+	qr/I have just received/i,
 
 	#mp3 play messages
-	q/is listening to/,
-	q/\]\-MP3INFO\-\[/,
+	qr/is listening to/,
+	qr/\]\-MP3INFO\-\[/,
 
 	#spammy scripts
-	q/\]\-SpR\-\[/,
-	q/We are BORG/,
+	qr/\]\-SpR\-\[/,
+	qr/We are BORG/,
 
 	#general messages
-	q/brave soldier in the war/,
+	qr/brave soldier in the war/,
 );
 
 my $nlines      = 0; # how many lines we passed through filter
@@ -237,7 +332,7 @@ sub isFiltered {
 
 	if ($use_filter_allow) {
 		foreach $regexp (@filter_allow) {
-			if ($text =~ /$regexp/) {
+			if ($text =~ $regexp) {
 				$nallow++;
 				return 0;
 			}
@@ -248,7 +343,7 @@ sub isFiltered {
 	foreach $regexp (@filter_deny) {
 		$nrules_checked++;
 
-		if ($text =~ /$regexp/) {
+		if ($text =~ $regexp) {
 			# filter statistic
 			$nfiltered++;
 			$checklensum += $nrules_checked;
@@ -325,8 +420,9 @@ sub save_filter {
 
 	Xchat::print("${B}FILTER SAVE >$filter_file${B}\n");
 	foreach my $regexp (@filter_deny) {
-		Xchat::print("/".$regexp."/ saved\n");
-		print $fh $regexp."\n";
+		my $str = re_to_stringify_mod($regexp);
+		Xchat::print(re_to_str_repr($regexp)." saved as $str\n");
+		print $fh "$str\n";
 	}
 
 	unless (close $fh) {
@@ -349,8 +445,7 @@ sub load_filter {
 		return;
 	};
 
-	@filter_deny = <$fh>;
-	map (chomp, @filter_deny);
+	@filter_deny = map { chomp($_); stringify_to_re($_); } <$fh>;
 
 	unless (close $fh) {
 		Xchat::print("${B}FILTER:${B} Couldn't close file to load filter: $!\n");
@@ -359,7 +454,7 @@ sub load_filter {
 
 	Xchat::print("${B}FILTER DENY START ----------${B}\n");
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
-		Xchat::print(" [$i]: /".$filter_deny[$i]."/\n");
+		Xchat::print(" [$i]: ".re_to_str_repr($filter_deny[$i])."\n");
 	}
 	Xchat::print("${B}FILTER DENY END ------------${B}\n");
 }
@@ -442,9 +537,9 @@ sub cmd_debug {
 	if ($nfiltered > 0) {
 		Xchat::print("average to match = ".$checklensum/$nfiltered."\n");
 		foreach my $rule (sort { $stats{$b} <=> $stats{$a} } keys %stats) {
-			Xchat::printf("%5u: %5.1f%% [%2u] /%s/\n",
+			Xchat::printf("%5u: %5.1f%% [%2u] %s\n",
 			              $stats{$rule}, 100.0*$stats{$rule}/$nfiltered,
-			              $deny_idx{$rule}, slquote($rule));
+			              $deny_idx{$rule}, re_string_to_str_repr($rule));
 		}
 	}
 	if ($use_filter_allow || $nallow > 0) {
@@ -506,11 +601,11 @@ sub cmd_print_rules {
 	Xchat::print("${B}ALLOW${B}".($use_filter_allow ? ' (on)' : ' (off)')."\n");
 
 	for (my $i = 0; $i <= $#filter_allow; $i++) {
-		Xchat::print("[$i]: /".$filter_allow[$i]."/\n");
+		Xchat::printf("[$2i]: %s\n", $i, re_to_str_repr($filter_allow[$i]));
 	}
 	Xchat::print("${B}DENY${B}\n");
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
-		Xchat::print("[$i]: /".$filter_deny[$i]."/\n");
+		Xchat::printf("[$2i]: %s\n", $i, re_to_str_repr($filter_deny[$i]));
 	}
 	Xchat::print("${B}FILTER PRINT END ------------${B}\n");
 }
@@ -533,7 +628,8 @@ sub cmd_delete_rule {
 	$num =~ s/^\s*(.*?)\s*$/$1/g if $num;
 	SWITCH: {
 		unless ($num) {
-			Xchat::print("${B}FILTER:${B} deleting /".$filter_deny[-1]."/\n");
+			Xchat::print("${B}FILTER:${B} deleting ".
+			             re_to_str_repr($filter_deny[-1])."/\n");
 			$#filter_deny--;
 			Xchat::print("${B}FILTER:${B} deleted successfully last rule\n");
 			last SWITCH;
@@ -548,7 +644,8 @@ sub cmd_delete_rule {
 		}
 		# default
 		{
-			Xchat::print("${B}FILTER:${B} deleting /".$filter_deny[$num]."/\n");
+			Xchat::print("${B}FILTER:${B} deleting ".
+			             re_to_str_repr($filter_deny[$num])."\n");
 			delete_rule($num);
 			Xchat::print("${B}FILTER:${B} deleted successfully rule $num\n");
 		}
@@ -566,7 +663,7 @@ sub cmd_show_rule {
 		Xchat::print("${B}FILTER:${B} rule $num does not exist\n");
 	} else {
 		Xchat::print("${B}FILTER:${B} ".(defined $num ? "[$num]" : "last").
-		             " rule /".$filter_deny[defined $num ? $num : -1]."/\n");
+		             " rule ".re_to_str_repr($filter_deny[defined $num ? $num : -1])."\n");
 	}
 }
 
