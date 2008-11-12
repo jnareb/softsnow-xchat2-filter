@@ -86,7 +86,7 @@ use File::Copy qw(move);
 
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.2.1";
+my $scriptVersion = "2.2.2";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr  2; # bold
@@ -98,11 +98,16 @@ my $O = chr 15; # reset
 ### config ###
 my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 
-my $filter_turned_on = 0;  # is filter is turned on
-my $limit_to_server  = ''; # if true limit to given server (host)
-my $use_filter_allow = 0;  # use overrides (ALLOW before DENY)
+# is filter is turned on on start
+my $filter_turned_on = 1;
+# if true limit to given server (host)
+my $limit_to_server  = 'irc.irchighway.net';
+# use overrides (ALLOW before DENY)
+my $use_filter_allow = 0;
 
+# log (print) filtered content to separate window
 my $filtered_to_window = 0;
+# name of window with filtered lines
 my $filter_window = "(filtered)";
 ### end config ###
 
