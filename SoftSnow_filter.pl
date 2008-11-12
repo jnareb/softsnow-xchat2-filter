@@ -151,8 +151,8 @@ Xchat::hook_command("FILTERWINDOW", \&filterwindow_command_handler,
                     { help_text => $filterwindow_help });
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
-Xchat::print("Loading ${B}$scriptName $scriptVersion${B}...\n");
-
+Xchat::print("Loading ${B}$scriptName $scriptVersion${B}...\n".
+             " For help: ${B}/FILTER HELP${B}\n");
 
 # GUI, windows, etc.
 if ($filtered_to_window) {
@@ -735,7 +735,7 @@ sub filterwindow_command_handler {
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ----------------------------------------------------------------------
 
-Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n",
-             " For help: ${B}/FILTER HELP${B}\n");
+# somehow this isn't visible...
+Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n");
 
 1;
