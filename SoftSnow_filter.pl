@@ -123,6 +123,7 @@ ${B}/FILTER $filter_commands${B}
 /FILTER ALL - resumes filtering everywhere i.e. removes limits
 /FILTER SAVE - saves the rules to the file $filter_file
 /FILTER LOAD - loads the rules from the file, replacing existing rules
+/FILTER CONVERT [<file>] - loads DENY rules from old-style rules file
 /FILTER ADD <rule> - add rule at the end of the DENY rules
 /FILTER DELETE [<num>] - delete rule number <num>, or last rule
 /FILTER SHOW   [<num>] - show rule number <num>, or last rule
@@ -437,10 +438,15 @@ sub save_filter {
 }
 
 sub load_filter {
+	my $filename = shift || $filter_file;
 	my $fh;
 
-	Xchat::print("${B}FILTER:${B} ...loading filter patterns\n");
-	unless (open $fh, '<', $filter_file) {
+	Xchat::print("${B}FILTER:${B} ...loading filter patterns (rules)\n");
+	unless (-e $filename) {
+		Xchat::print("${B}FILTER:${B} File '$filename' doesn't exist\n");
+		return;
+	}
+	unless (open $fh, '<', $filename) {
 		Xchat::print("${B}FILTER:${B} Couldn't open file to load filter: $!\n");
 		return;
 	};
@@ -747,6 +753,12 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^(RE)?LOAD$/i) {
 		load_filter();
 		Xchat::print("${B}FILTER:${B} loaded DENY rules from $filter_file\n");
+
+	} elsif ($cmd =~ /^CONVERT$/i) {
+		my $rules_file = $arg ||
+			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf"
+		load_filter($rules_file);
+		Xchat::print("${B}FILTER:${B} loaded DENY rules from $rules_file\n");
 
 	} elsif ($cmd =~ /^WINDOW$/i) {
 		return filterwindow_command_handler(
