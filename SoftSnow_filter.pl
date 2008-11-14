@@ -212,10 +212,18 @@ sub stringify_to_re {
 }
 
 # converts 'qr/re/i' or 'm/re/i' to qr{re}i, etc.
+# extra options:
+#  -strict  : return undef if not of the form instead of generic regexp
+#  -no_rest : return undef or generic if there is something else in line
 sub str_repr_to_re {
 	my $str = shift;
-	my ($op,$re,$flags) = (extract_quotelike($str))[3,5,10];
-	return qr{$str} unless (defined $op && $op =~ /^(?:qr|m)$/ && $re);
+	my %opts = ($_[0] && ref($_[0]) eq 'HASH' ? %{$_[0]} : @_);
+
+	my ($rest,$op,$quote,$re,$flags) =
+		(extract_quotelike($str))[2,3,4,5,10];
+	return $opts{-strict} ? undef : qr{$str}
+		unless (defined $op && $re && !($opts{-no_rest} && $rest) &&
+		        ($op =~ /^(?:qr|m)$/ || ($op eq '' && $quote eq '/')));
 
 	my $sub = _QR_TYPES->{$flags} || sub { qr{$_[0]} };
 	my $qr = &$sub($re);
