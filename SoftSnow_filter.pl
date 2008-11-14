@@ -123,6 +123,7 @@ ${B}/FILTER $filter_commands${B}
 /FILTER ALL - resumes filtering everywhere i.e. removes limits
 /FILTER SAVE - saves the rules to the file $filter_file
 /FILTER LOAD - loads the rules from the file, replacing existing rules
+/FILTER SAVERULES [<file>] - saves DENY rules to old-style rules file
 /FILTER CONVERT [<file>] - loads DENY rules from old-style rules file
 /FILTER ADD <rule> - add rule at the end of the DENY rules
 /FILTER DELETE [<num>] - delete rule number <num>, or last rule
@@ -411,7 +412,8 @@ sub privmsg_handler {
 # ------------------------------------------------------------
 
 sub save_filter {
-	my ($fh, $tmpfile) = tempfile($filter_file.'.XXXXXX', UNLINK=>1);
+	my $filename = shift || $filter_file;
+	my ($fh, $tmpfile) = tempfile($filename.'.XXXXXX', UNLINK=>1);
 
 	unless ($fh) {
 		Xchat::print("${B}FILTER:${B} ".
@@ -419,7 +421,7 @@ sub save_filter {
 		return;
 	};
 
-	Xchat::print("${B}FILTER SAVE >$filter_file${B}\n");
+	Xchat::print("${B}FILTER SAVE >$filename${B}\n");
 	foreach my $regexp (@filter_deny) {
 		my $str = re_to_stringify_mod($regexp);
 		Xchat::print(re_to_str_repr($regexp)." saved as $str\n");
@@ -430,8 +432,8 @@ sub save_filter {
 		Xchat::print("${B}FILTER:${B} Couldn't close file to save filter: $!\n");
 		return;
 	};
-	#move($tmpfile, $filter_file);
-	rename($tmpfile, $filter_file);
+	#move($tmpfile, $filename);
+	rename($tmpfile, $filename);
 	Xchat::print("${B}FILTER SAVED ----------${B}\n");
 
 	return 1;
@@ -749,6 +751,12 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^SAVE$/i) {
 		save_filter();
 		Xchat::print("${B}FILTER:${B} saved DENY rules to $filter_file\n");
+
+	} elsif ($cmd =~ /^SAVERULES$/i) {
+		my $rules_file = $arg ||
+			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf"
+		save_filter($rules_file);
+		Xchat::print("${B}FILTER:${B} saved DENY rules to $rules_file\n");
 
 	} elsif ($cmd =~ /^(RE)?LOAD$/i) {
 		load_filter();
