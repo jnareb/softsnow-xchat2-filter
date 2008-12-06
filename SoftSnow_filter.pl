@@ -100,7 +100,7 @@ my $R = chr 22; # reverse
 my $O = chr 15; # reset
 
 ### config ###
-my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
+my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.cfg";
 
 my $filter_turned_on = 0;  # is filter is turned on
 my $limit_to_server  = ''; # if true limit to given server (host)
