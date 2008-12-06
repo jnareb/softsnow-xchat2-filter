@@ -85,8 +85,6 @@
 use strict;
 use warnings;
 
-use constant DEBUG => 0;
-
 use File::Temp qw(tempfile);
 use File::Copy qw(move);
 use Text::Balanced qw(extract_quotelike);
@@ -439,8 +437,6 @@ if (open $data_fh, '<', $scriptfile) {
 } else {
 	Xchat::print(" Couldn't open $scriptfile for default config: $!\n");
 }
-Xchat::print("$scriptfile has __DATA__ at $data_pos ($.)\n") if DEBUG;
-Xchat::print("and it starts with $_") if DEBUG;
 
 # configuration sections
 my %conf_sect = (
@@ -527,11 +523,8 @@ sub parse_config_line {
 
 	if ($conf_sect{$section}) {
 		return $conf_sect{$section}->(@_);
-	# commented out means: skip unknown sections
-	#} else {
-	#	# use default section if sections is unknown
-	#	return $conf_sect{$default_section}->(@_);
 	}
+	# skip unknown sections
 	return 1;
 }
 
@@ -552,36 +545,28 @@ sub parse_var_line {
 		# first, try exact match
 		if (exists $conf_vars{lc($key)}) {
 			$idx = lc($key);
-			Xchat::print(" Found $idx at $.: $line\n") if DEBUG;
 		} else {
 		# then try provided regexps
-			my $s = " Checking $key: " if DEBUG;
 		VAR:
 			while (my ($var, $info) = each %conf_vars) {
-				$s .= " $var" if DEBUG;
 				if ($key =~ $info->{'regexp'}) {
 					$idx = $var;
 					last VAR;
 				}
 			}
 			keys %conf_vars; # reset each
-			Xchat::print("$s ".(defined $idx ? "(FOUND)" : "(not found?)")."\n")
-				if DEBUG;
 		}
 		return unless defined $idx;
 
 		# convert with check, if needed
-		Xchat::print(" $idx at $.: $line\n") if DEBUG;
 		if (ref($conf_vars{$idx}{'convert'}) eq 'CODE') {
 			my $result = $conf_vars{$idx}{'convert'}->($value);
 			if (defined $result) {
-				Xchat::print(" * value for $idx at $. is $result\n") if DEBUG;
 				${$conf_vars{$idx}{'var'}} = $result;
 			} else {
 				Xchat::print(" * Invalid value for $idx at line $.: $line\n");
 			}
 		} else {
-			Xchat::print(" * value for $idx at $. is $value\n") if DEBUG;
 			${$conf_vars{$idx}{'var'}} = $value;
 		}
 
@@ -593,7 +578,6 @@ sub parse_var_line {
 
 		return 1;
 	}
-	Xchat::print(" Doesn't look like 'var = value' at $.: $line\n") if DEBUG;
 	return;
 }
 
@@ -606,16 +590,11 @@ sub parse_rule_line {
 	my $regexp = str_repr_to_re($line, -strict=>1);
 	if (defined $regexp) {
 		# check if rule is already loaded
-		Xchat::print(" $section rule at $.: $regexp\n") if DEBUG;
 		if ($filter_seen{$section}{$regexp}) {
 			return scalar @{$filter_sect{$section}};
 		} else {
 			return push @{$filter_sect{$section}}, $regexp;
 		}
-	} else {
-		Xchat::print(" Doesn't look like regexp for '$section' at line $.: $line\n")
-			if DEBUG;
-		return;
 	}
 }
 
@@ -698,7 +677,6 @@ sub load_config {
 		# [section]
 		if ($line =~ /^\s*\[(.*)\]\s*$/) {
 			$section = lc($1) if $1;
-			Xchat::print(" [$section] at line $.\n") if DEBUG;
 			next LINE;
 		}
 		# all the rest
