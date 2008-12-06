@@ -55,6 +55,10 @@
 #   contents to separate '(filtered)' window
 # Version 2.2.0:
 # * /FILTER DEBUG shows now some filter statistics
+# Version 2.2.1:
+# * /FILTER SORT allows sorting rules by their stats
+# Version 3.0:
+# * Change config file syntax, use __DATA__ for default config
 #
 ## TODO:
 ##
@@ -81,12 +85,14 @@
 use strict;
 use warnings;
 
+use constant DEBUG => 0;
+
 use File::Temp qw(tempfile);
 use File::Copy qw(move);
 use Text::Balanced qw(extract_quotelike);
 
 my $scriptName    = "SoftSnow XChat2 Filter";
-my $scriptVersion = "2.2.2-pre1";
+my $scriptVersion = "3.0-pre1";
 my $scriptDescr   = "Filter out file server announcements and IRC SPAM";
 
 my $B = chr  2; # bold
@@ -121,8 +127,8 @@ ${B}/FILTER $filter_commands${B}
 /FILTER SERVER - limits filtering to current server (host)
 /FILTER SERVERON - limits to server and turns filter on
 /FILTER ALL - resumes filtering everywhere i.e. removes limits
-/FILTER SAVE - saves the rules to the file $filter_file
-/FILTER LOAD - loads the rules from the file, replacing existing rules
+/FILTER LOAD [<file>] - loads the config and rules from the file
+/FILTER RESET - reset configuration and rules to built-in values
 /FILTER SAVERULES [<file>] - saves DENY rules to old-style rules file
 /FILTER CONVERT [<file>] - loads DENY rules from old-style rules file
 /FILTER ADD <rule> - add rule at the end of the DENY rules
@@ -154,7 +160,6 @@ Xchat::hook_command("FILTERWINDOW", \&filterwindow_command_handler,
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
 Xchat::print("Loading ${B}$scriptName $scriptVersion${B}...\n");
-
 
 # GUI, windows, etc.
 if ($filtered_to_window) {
@@ -419,6 +424,312 @@ sub privmsg_handler {
 
 # ------------------------------------------------------------
 
+my $data_fh = \*DATA; # works only for standalone script
+my $data_pos = 0;
+
+my $default_section = 'config';
+
+# find __DATA__ section in this file and rewind to it
+my $scriptfile = Xchat::get_info("xchatdir") . "/SoftSnow_filter.pl";
+if (open $data_fh, '<', $scriptfile) {
+	while (<$data_fh>) {
+		last if /^__DATA__(?:\n|\r\n|\r)$/;
+	}
+	$data_pos = tell $data_fh;
+} else {
+	Xchat::print(" Couldn't open $scriptfile for default config: $!\n");
+}
+Xchat::print("$scriptfile has __DATA__ at $data_pos ($.)\n") if DEBUG;
+Xchat::print("and it starts with $_") if DEBUG;
+
+# configuration sections
+my %conf_sect = (
+	'config' => \&parse_var_line,
+	# all keys which use \&parse_rule_line should also
+	# be keys for %filter_sect and %filter_seen hashes
+	'deny'   => \&parse_rule_line,
+	'allow'  => \&parse_rule_line,
+);
+# sections with filter rules
+my %filter_sect = (
+	'allow' => \@filter_allow,
+	'deny'  => \@filter_deny,
+);
+# seen rules, to avoid duplication
+my %filter_seen = (
+	'allow' => { map { $_ => 1 } @{$filter_sect{'allow'}} },
+	'deny'  => { map { $_ => 1 } @{$filter_sect{'deny'}}  },
+);
+# configuration variables
+my %conf_vars = (
+	# boolean
+	'filter_turned_on' => {
+		'regexp' => qr/^(?:filter_turned_on|filter)$/i,
+		'convert' => \&to_bool,
+		'var' => \$filter_turned_on,
+	},
+	'use_filter_allow' => {
+		'regexp' => qr/^(?:use_filter_allow|allow_rules)$/i,
+		'convert' => \&to_bool,
+		'var' => \$use_filter_allow,
+	},
+	'filtered_to_window' => {
+		'regexp' => qr/^(?:filtered_to_window|logging|FilteredToWindow)$/i,
+		'convert' => \&to_bool,
+		'var' => \$filtered_to_window,
+	},
+	# string
+	'filter_window' => {
+		'regexp' => qr/^(?:filter_window|FilterWindow)$/i,
+		'var' => \$filter_window,
+	},
+	'limit_to_server' => {
+		'regexp' => qr/^(?:limit_to_server|server)$/i,
+		'check' => \&valid_hostname,
+		'var' => \$limit_to_server,
+	}
+	# compatibility with ebooks-filter
+	#'FilterRule' => {
+	#	'regexp' => qr/^FilterRule$/,
+	#	'convert' => \&ebooks_filter_rule,
+	#	'var' => \@filter_deny,
+	#}
+);
+
+sub to_bool {
+	my $text = shift;
+
+	my $true_regexp  = qr/^(?:1|true |on |yes)$/xi; # empty was yes
+	my $false_regexp = qr/^(?:0|false|off|no )$/xi;
+
+
+	if ($text =~ $true_regexp) {
+		return 1;
+	} elsif ($text =~ $false_regexp) {
+		return 0;
+	}
+	# doesn't look like bool
+	return undef;
+}
+
+sub valid_hostname {
+	my $hostname = shift;
+
+	# very basic check:
+	# hostname should be of at least the form host.domain.tld
+	# or empty; empty hostname means do not limit filtering
+	return $hostname =~ /.+\..+\..+/ || $hostname eq '';
+}
+
+
+sub parse_config_line {
+	my ($line, $section, $save) = @_;
+
+	if ($conf_sect{$section}) {
+		return $conf_sect{$section}->(@_);
+	# commented out means: skip unknown sections
+	#} else {
+	#	# use default section if sections is unknown
+	#	return $conf_sect{$default_section}->(@_);
+	}
+	return 1;
+}
+
+sub parse_var_line {
+	my ($line, $section) = @_;
+
+	if ($line =~ /^\s*(\w+)\s*=(.*)$/) {
+		my ($key, $value) = ($1, $2);
+
+		#$key = lc($key);
+		$value = defined $value ? $value : '';
+		$value =~ s/^\s+//;
+		$value =~ s/\s+$//;
+		$value =~ s/^"(.*)"$/$1/;
+
+		# find variable
+		my $idx;
+		# first, try exact match
+		if (exists $conf_vars{lc($key)}) {
+			$idx = lc($key);
+			Xchat::print(" Found $idx at $.: $line\n") if DEBUG;
+		} else {
+		# then try provided regexps
+			my $s = " Checking $key: " if DEBUG;
+		VAR:
+			while (my ($var, $info) = each %conf_vars) {
+				$s .= " $var" if DEBUG;
+				if ($key =~ $info->{'regexp'}) {
+					$idx = $var;
+					last VAR;
+				}
+			}
+			keys %conf_vars; # reset each
+			Xchat::print("$s ".(defined $idx ? "(FOUND)" : "(not found?)")."\n")
+				if DEBUG;
+		}
+		return unless defined $idx;
+
+		# convert with check, if needed
+		Xchat::print(" $idx at $.: $line\n") if DEBUG;
+		if (ref($conf_vars{$idx}{'convert'}) eq 'CODE') {
+			my $result = $conf_vars{$idx}{'convert'}->($value);
+			if (defined $result) {
+				Xchat::print(" * value for $idx at $. is $result\n") if DEBUG;
+				${$conf_vars{$idx}{'var'}} = $result;
+			} else {
+				Xchat::print(" * Invalid value for $idx at line $.: $line\n");
+			}
+		} else {
+			Xchat::print(" * value for $idx at $. is $value\n") if DEBUG;
+			${$conf_vars{$idx}{'var'}} = $value;
+		}
+
+		# check if value looks all right
+		if (ref($conf_vars{$idx}{'check'}) eq 'CODE' &&
+		    !$conf_vars{$idx}{'check'}->($value)) {
+			Xchat::print(" * Suspicious value for $idx at line $.: $line\n");
+		}
+
+		return 1;
+	}
+	Xchat::print(" Doesn't look like 'var = value' at $.: $line\n") if DEBUG;
+	return;
+}
+
+sub parse_rule_line {
+	my ($line, $section) = @_;
+
+	# just in case
+	return unless (exists $filter_sect{$section});
+
+	my $regexp = str_repr_to_re($line, -strict=>1);
+	if (defined $regexp) {
+		# check if rule is already loaded
+		Xchat::print(" $section rule at $.: $regexp\n") if DEBUG;
+		if ($filter_seen{$section}{$regexp}) {
+			return scalar @{$filter_sect{$section}};
+		} else {
+			return push @{$filter_sect{$section}}, $regexp;
+		}
+	} else {
+		Xchat::print(" Doesn't look like regexp for '$section' at line $.: $line\n")
+			if DEBUG;
+		return;
+	}
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+sub load_config {
+	my $read_from = shift;
+	my ($filename, $fh);
+	# - try given file, if cannot: die
+	#   $read_from is filename
+	# - try default file, if cannot: __DATA__
+	#   $read_from is undefined
+	# - read __DATA__
+	#   $read_from is GLOB ref (== $data_fh)
+
+	if (ref $read_from) {
+		#$fh = $read_from;
+		$fh = $data_fh; # to have correct $data_pos
+	} elsif (defined $read_from) {
+		$filename = $read_from;
+	} else {
+		$filename = $filter_file;
+	}
+
+	# open or rewind $fh
+	if ($fh) {
+		seek $fh, $data_pos, 0;
+	} else {
+		unless (-r $filename &&
+		        open $fh, '<', $filename) {
+			# there was some problem with $filename
+			# either fail, or fallback to default
+			if (defined $read_from) {
+				# explicit request for a file; fail
+				if (! -e $filename) {
+					Xchat::print("${B}FILTER:${B} ".
+					             "Config file $filename does not exist\n");
+					return;
+				} elsif (! -r $filename) {
+					Xchat::print("${B}FILTER:${B} ".
+					             "Config file $filename is not readable\n");
+					return;
+				} else {
+					Xchat::print("${B}FILTER:${B} ".
+					             "Couldn't open config file $filename to read: $!\n");
+					return;
+				}
+			} else {
+				# default file can be read from __DATA__ section
+				$fh = $data_fh;
+				seek $fh, $data_pos, 0;
+				$filename = undef;
+			}
+		}
+	}
+	# $fh is set here...
+	if (defined $filename) {
+		Xchat::print("${B}FILTER:${B} Reading config from $filename\n");
+	} else {
+		Xchat::print("${B}FILTER:${B} Reseting to default configuration\n");
+	}
+
+	my $section = $default_section;
+	$filter_seen{'allow'} = { map { $_ => 1 } @{$filter_sect{'allow'}} };
+	$filter_seen{'deny'}  = { map { $_ => 1 } @{$filter_sect{'deny'}}  };
+ LINE:
+	while (my $line = <$fh>) {
+		chomp $line;
+
+		# continuation (not yet supported)
+		#if ($line =~ s/\\$//) {
+		#	$line .= <$fh>;
+		#	redo LINE unless eof;
+		#}
+		# comments
+		next LINE if ($line =~ /^[#:]/);
+		# whitespace-only lines (includes empty lines)
+		next LINE if ($line =~ /^\s*$/);
+
+		# [section]
+		if ($line =~ /^\s*\[(.*)\]\s*$/) {
+			$section = lc($1) if $1;
+			Xchat::print(" [$section] at line $.\n") if DEBUG;
+			next LINE;
+		}
+		# all the rest
+		unless (parse_config_line($line, $section)) {
+			# some error occured
+			if ($. == 1) {
+				# error at very first line probably means old-style config file
+				Xchat::print(<<"EOF");
+${B}FILTER:${B} First line of $filename doesn't look like config file:
+ $line
+ Perhaps you should use '/FILTER CONVERT $filename' instead?
+EOF
+				return;
+			} else {
+				# notify of error, but confinue
+				Xchat::print(" * Invalid entry for section $section at line $.:$line\n");
+			}
+		}
+	} # end while
+
+	if (defined $filename) {
+		close $fh
+			or Xchat::print("${B}FILTER:${B} ".
+			                "Error closing config file $filename: $!\n");
+	} else {
+		seek $fh, $data_pos, 0;
+	}
+}
+
+# ............................................................
+
 sub save_filter {
 	my $filename = shift || $filter_file;
 	my ($fh, $tmpfile) = tempfile($filename.'.XXXXXX', UNLINK=>1);
@@ -617,11 +928,11 @@ sub cmd_print_rules {
 	Xchat::print("${B}ALLOW${B}".($use_filter_allow ? ' (on)' : ' (off)')."\n");
 
 	for (my $i = 0; $i <= $#filter_allow; $i++) {
-		Xchat::printf("[$2i]: %s\n", $i, re_to_str_repr($filter_allow[$i]));
+		Xchat::printf("[%2i]: %s\n", $i, re_to_str_repr($filter_allow[$i]));
 	}
 	Xchat::print("${B}DENY${B}\n");
 	for (my $i = 0; $i <= $#filter_deny; $i++) {
-		Xchat::printf("[$2i]: %s\n", $i, re_to_str_repr($filter_deny[$i]));
+		Xchat::printf("[%2i]: %s\n", $i, re_to_str_repr($filter_deny[$i]));
 	}
 	Xchat::print("${B}FILTER PRINT END ------------${B}\n");
 }
@@ -756,23 +1067,25 @@ sub filter_command_handler {
 	} elsif ($cmd =~ /^SHOW$/i) {
 		cmd_show_rule($arg);
 
-	} elsif ($cmd =~ /^SAVE$/i) {
-		save_filter();
-		Xchat::print("${B}FILTER:${B} saved DENY rules to $filter_file\n");
+	#} elsif ($cmd =~ /^SAVE$/i) {
+	#	save_filter();
+	#	Xchat::print("${B}FILTER:${B} saved DENY rules to $filter_file\n");
 
 	} elsif ($cmd =~ /^SAVERULES$/i) {
 		my $rules_file = $arg ||
-			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf"
+			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 		save_filter($rules_file);
 		Xchat::print("${B}FILTER:${B} saved DENY rules to $rules_file\n");
 
 	} elsif ($cmd =~ /^(RE)?LOAD$/i) {
-		load_filter();
-		Xchat::print("${B}FILTER:${B} loaded DENY rules from $filter_file\n");
+		load_config($arg);
+
+	} elsif ($cmd =~ /^RESET$/i) {
+		load_config($data_fh);
 
 	} elsif ($cmd =~ /^CONVERT$/i) {
 		my $rules_file = $arg ||
-			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf"
+			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
 		load_filter($rules_file);
 		Xchat::print("${B}FILTER:${B} loaded DENY rules from $rules_file\n");
 
@@ -864,3 +1177,114 @@ Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n",
              " For help: ${B}/FILTER HELP${B}\n");
 
 1;
+__DATA__
+# This is SoftSnow XChat2 Filter configuration file.
+#
+# Any line which starts with a # (hash) or : (colon) is a comment
+# and is ignored. Use of # is preferred; support for : was added for
+# compatibility with another filter-ebooks XChat2 plugin. Blank lines
+# are ignored.
+#
+# The file consists of sections and variables. A section begins with
+# the name of the section in square brackets and continues until the
+# next section begins. Section names are not case sensitive.
+#
+# Currently are now recognized the following sections:
+#  * 'config' (default section), which contains filter configuration:
+#    it consist of setting config variables (filter parameters).
+#  * 'allow' and 'deny', which contain filter rules, allow and deny
+#    rules, respectively. Allow rules, if enabled, are applied before
+#    deny rules.
+# Unknown (unrecognized) sections are skipped with warning.
+#
+# The 'config' section contains setting variables, in the form 
+# 'name = value'. Leading and trailing whitespace in a variable value
+# is discarded. Internal whitespace within a variable value is retained
+# verbatim. Boolean values may be given as yes/no, on/off, 0/1 or
+# true/false.
+
+# NOTE that only variables explicitely listed in 'config' section
+# of configuration file will be saved! All the rest would reset to
+# default (starting) value.
+
+
+## Filter CONFIG
+
+# Should filter be turned on by default?
+filter = off
+# Limit filtering to given IRC server (host); set to empty to filter all
+limit_to_server =
+
+# Whether to log (print) filtered lines to separate window (tab)
+filtered_to_window = 0
+# Name of window (tab) with filtered lines
+filter_window = (filtered)
+
+# Use (turn on) ALLOW rules
+use_filter_allow = 0
+
+
+# Sections 'allow' and 'deny' consist entirely of regular expressions
+# in the form of 'qr/regexp/' or '/regexp/' for case-sensitive filter
+# rule, and 'qr/regexp/i' and '/regexp/i' for case-insensitive rule.
+# Other forms of regexp quoting _should_ be recognized, but YMMV.
+
+## ALLOW rules, applied before DENY rules (i.e. exceptions)
+[allow]
+#show what people search for
+qr/^\@search\s/
+
+
+## DENY rules: which lines to filter (do not show)
+[deny]
+#generic conventions for announcements, etc.
+qr/\@/
+qr/^\s*\!/
+qr/slot\(s\)/
+qr/~&~&~/
+
+#xdcc
+qr/^\#\d+/
+
+#fserves
+qr/fserve.*trigger/i
+qr/trigger.*(?:\!|\/ctcp)/i
+qr/type\:\s*\!/i
+qr/^Type\s*[!@]/
+qr/file server online/i
+
+#ftps
+qr/ftp.*l\/p/i
+
+#CTCPs
+qr/SLOTS/
+qr/LIST/
+qr/MP3 /
+
+#messages for when a file is received/failed to receive
+qr/DEFINITELY had the right stuff to get/i
+qr/has just received/i
+qr/I have just received/i
+qr/(?:^\s+|Bytes )Sent\: /
+
+#mis-paste
+qr/\s+\:\:\:INFO\:\:+(?:[KM]B|bytes)/
+qr/^-+.+(?:[KM]B|bytes)$/
+
+#mp3 play messages
+qr/is listening to/
+qr/\]\-MP3INFO\-\[/
+
+#spammy scripts
+qr/\]\-SpR\-\[/
+qr/We are BORG/
+
+#general messages
+qr/brave soldier in the war/
+qr/if you \*must\* have it\./
+qr/For Your Leeching Pleasure/
+qr/Message:\[/
+qr/I am travelling so the hotel firewalls stop all but passive DCC\./
+
+
+## end of SoftSnow XChat Filter config.
