@@ -701,8 +701,7 @@ EOF
 		                "Error closing default config: $!\n");
 }
 
-sub open_default_config {
-	my $config = <<'EOF';
+my $config = <<'EOF';
 # This is SoftSnow XChat2 Filter configuration file.
 #
 # Any line which starts with a # (hash) or : (colon) is a comment
@@ -816,6 +815,7 @@ qr/I am travelling so the hotel firewalls stop all but passive DCC\./
 ## end of SoftSnow XChat Filter config.
 EOF
 
+sub open_default_config {
 	open my $fd, '<', \$config;
 	return $fd;
 }
