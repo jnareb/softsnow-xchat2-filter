@@ -96,7 +96,8 @@ my $R = chr 22; # reverse
 my $O = chr 15; # reset
 
 ### config ###
-my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
+my $xchatdir = Xchat::get_info("xchatdir");
+my $filter_file = "$xchatdir/SoftSnow_filter.conf";
 
 # is filter is turned on on start
 my $filter_turned_on = 1;
