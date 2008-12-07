@@ -736,17 +736,17 @@ my $config = <<'EOF';
 [config]
 
 # Should filter be turned on by default?
-filter = off
+filter = on
 # Limit filtering to given IRC server (host); set to empty to filter all
-limit_to_server =
+limit_to_server = irc.irchighway.net
+
+# Use (turn on) ALLOW rules
+use_filter_allow = 0
 
 # Whether to log (print) filtered lines to separate window (tab)
 filtered_to_window = 0
 # Name of window (tab) with filtered lines
 filter_window = (filtered)
-
-# Use (turn on) ALLOW rules
-use_filter_allow = 0
 
 
 # Sections 'allow' and 'deny' consist entirely of regular expressions
