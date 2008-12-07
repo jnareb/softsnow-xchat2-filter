@@ -101,7 +101,8 @@ my $O = chr 15; # reset
 
 ### config ###
 my $xchatdir = Xchat::get_info("xchatdir");
-my $filter_file = "$xchatdir/SoftSnow_filter.cfg";
+my $config_file = "$xchatdir/SoftSnow_filter.cfg";
+my $filter_file = "$xchatdir/SoftSnow_filter.conf"; # old format
 
 # is filter is turned on on start
 my $filter_turned_on = 1;
@@ -623,7 +624,7 @@ sub load_config {
 	} elsif (defined $read_from) {
 		$filename = $read_from;
 	} else {
-		$filename = $filter_file;
+		$filename = $config_file;
 	}
 
 	# open or rewind $fh
@@ -1057,7 +1058,7 @@ sub filter_command_handler {
 	#	Xchat::print("${B}FILTER:${B} saved DENY rules to $filter_file\n");
 
 	} elsif ($cmd =~ /^SAVERULES$/i) {
-		my $rules_file = $arg || "$xchatdir/SoftSnow_filter.conf";
+		my $rules_file = $arg || $filter_file;
 		save_filter($rules_file);
 		Xchat::print("${B}FILTER:${B} saved DENY rules to $rules_file\n");
 
@@ -1068,7 +1069,7 @@ sub filter_command_handler {
 		load_config($data_fh);
 
 	} elsif ($cmd =~ /^CONVERT$/i) {
-		my $rules_file = $arg || "$xchatdir/SoftSnow_filter.conf";
+		my $rules_file = $arg || $filter_file;
 		load_filter($rules_file);
 		Xchat::print("${B}FILTER:${B} loaded DENY rules from $rules_file\n");
 
