@@ -758,7 +758,17 @@ sub load_filter {
 		return;
 	};
 
-	@filter_deny = map { chomp($_); stringify_to_re($_); } <$fh>;
+	$filter_seen{'deny'} = { map { $_ => 1 } @filter_deny };
+ LINE:
+	while (my $line = <$fh>) {
+		chomp $line;
+		next LINE if $line eq '';
+
+		my $regexp = stringify_to_re($line);
+		unless ($filter_seen{'deny'}{$regexp}) {
+			push @filter_deny, $regexp;
+		}
+	}
 
 	unless (close $fh) {
 		Xchat::print("${B}FILTER:${B} Couldn't close file to load filter: $!\n");
