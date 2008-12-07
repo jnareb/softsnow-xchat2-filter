@@ -100,13 +100,19 @@ my $R = chr 22; # reverse
 my $O = chr 15; # reset
 
 ### config ###
-my $filter_file = Xchat::get_info("xchatdir") . "/SoftSnow_filter.cfg";
+my $xchatdir = Xchat::get_info("xchatdir");
+my $filter_file = "$xchatdir/SoftSnow_filter.cfg";
 
-my $filter_turned_on = 0;  # is filter is turned on
-my $limit_to_server  = ''; # if true limit to given server (host)
-my $use_filter_allow = 0;  # use overrides (ALLOW before DENY)
+# is filter is turned on on start
+my $filter_turned_on = 1;
+# if true limit to given server (host)
+my $limit_to_server  = 'irc.irchighway.net';
+# use overrides (ALLOW before DENY)
+my $use_filter_allow = 0;
 
+# log (print) filtered content to separate window
 my $filtered_to_window = 0;
+# name of window with filtered lines
 my $filter_window = "(filtered)";
 ### end config ###
 
@@ -157,7 +163,8 @@ Xchat::hook_command("FILTERWINDOW", \&filterwindow_command_handler,
                     { help_text => $filterwindow_help });
 Xchat::hook_server("PRIVMSG", \&privmsg_handler);
 
-Xchat::print("Loading ${B}$scriptName $scriptVersion${B}...\n");
+Xchat::print("Loading ${B}$scriptName $scriptVersion${B}...\n".
+             " For help: ${B}/FILTER HELP${B}\n");
 
 # GUI, windows, etc.
 if ($filtered_to_window) {
@@ -428,7 +435,7 @@ my $data_pos = 0;
 my $default_section = 'config';
 
 # find __DATA__ section in this file and rewind to it
-my $scriptfile = Xchat::get_info("xchatdir") . "/SoftSnow_filter.pl";
+my $scriptfile = "$xchatdir/SoftSnow_filter.pl";
 if (open $data_fh, '<', $scriptfile) {
 	while (<$data_fh>) {
 		last if /^__DATA__(?:\n|\r\n|\r)$/;
@@ -1050,8 +1057,7 @@ sub filter_command_handler {
 	#	Xchat::print("${B}FILTER:${B} saved DENY rules to $filter_file\n");
 
 	} elsif ($cmd =~ /^SAVERULES$/i) {
-		my $rules_file = $arg ||
-			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
+		my $rules_file = $arg || "$xchatdir/SoftSnow_filter.conf";
 		save_filter($rules_file);
 		Xchat::print("${B}FILTER:${B} saved DENY rules to $rules_file\n");
 
@@ -1062,8 +1068,7 @@ sub filter_command_handler {
 		load_config($data_fh);
 
 	} elsif ($cmd =~ /^CONVERT$/i) {
-		my $rules_file = $arg ||
-			Xchat::get_info("xchatdir") . "/SoftSnow_filter.conf";
+		my $rules_file = $arg || "$xchatdir/SoftSnow_filter.conf";
 		load_filter($rules_file);
 		Xchat::print("${B}FILTER:${B} loaded DENY rules from $rules_file\n");
 
@@ -1151,8 +1156,8 @@ sub filterwindow_command_handler {
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ----------------------------------------------------------------------
 
-Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n",
-             " For help: ${B}/FILTER HELP${B}\n");
+# somehow this isn't visible...
+Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n");
 
 1;
 __DATA__
