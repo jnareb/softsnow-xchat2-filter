@@ -1183,7 +1183,14 @@ sub filter_command_handler {
 
 	} elsif ($cmd =~ /^RESET$/i) {
 		my $fh = open_default_config();
-		load_config($fh);
+		if ($fh) {
+			# clear rules
+			@filter_allow = @filter_deny = ();
+			# load default config
+			load_config($fh);
+		} else {
+			Xchat::print("${B}FILTER:${B} could not reset config\n");
+		}
 
 	} elsif ($cmd =~ /^CONVERT$/i) {
 		my $rules_file = $arg || $filter_file;
