@@ -82,6 +82,8 @@
 # * Triggers, for example automatic /dccallow + resubmit,
 #   if request fails (due to double '.' in filename, etc.)
 
+use 5.008; # we require PerlIO
+
 use strict;
 use warnings;
 
@@ -430,21 +432,8 @@ sub privmsg_handler {
 
 # ------------------------------------------------------------
 
-my $data_fh = \*DATA; # works only for standalone script
-my $data_pos = 0;
-
+# default (or starting) section
 my $default_section = 'config';
-
-# find __DATA__ section in this file and rewind to it
-my $scriptfile = "$xchatdir/SoftSnow_filter.pl";
-if (open $data_fh, '<', $scriptfile) {
-	while (<$data_fh>) {
-		last if /^__DATA__(?:\n|\r\n|\r)$/;
-	}
-	$data_pos = tell $data_fh;
-} else {
-	Xchat::print(" Couldn't open $scriptfile for default config: $!\n");
-}
 
 # configuration sections
 my %conf_sect = (
@@ -613,24 +602,21 @@ sub load_config {
 	my ($filename, $fh);
 	# - try given file, if cannot: die
 	#   $read_from is filename
-	# - try default file, if cannot: __DATA__
+	# - try default file, if cannot: open_default_config
 	#   $read_from is undefined
-	# - read __DATA__
-	#   $read_from is GLOB ref (== $data_fh)
+	# - read from default config
+	#   $read_from is GLOB ref (is a filehandle)
 
 	if (ref $read_from) {
-		#$fh = $read_from;
-		$fh = $data_fh; # to have correct $data_pos
+		$fh = $read_from;
 	} elsif (defined $read_from) {
 		$filename = $read_from;
 	} else {
 		$filename = $config_file;
 	}
 
-	# open or rewind $fh
-	if ($fh) {
-		seek $fh, $data_pos, 0;
-	} else {
+	# open $fh, if it is not open already
+	unless ($fh) {
 		unless (-r $filename &&
 		        open $fh, '<', $filename) {
 			# there was some problem with $filename
@@ -651,10 +637,13 @@ sub load_config {
 					return;
 				}
 			} else {
-				# default file can be read from __DATA__ section
-				$fh = $data_fh;
-				seek $fh, $data_pos, 0;
-				$filename = undef;
+				# default config
+				$fh = open_default_config();
+				unless ($fh) {
+					Xchat::print("${B}FILTER:${B} ".
+					             "Couldn't open default config to read: $!\n");
+					return;
+				}
 			}
 		}
 	}
@@ -705,13 +694,130 @@ EOF
 		}
 	} # end while
 
-	if (defined $filename) {
-		close $fh
-			or Xchat::print("${B}FILTER:${B} ".
-			                "Error closing config file $filename: $!\n");
-	} else {
-		seek $fh, $data_pos, 0;
-	}
+	close $fh
+		or Xchat::print("${B}FILTER:${B} ".
+		                defined $filename ?
+		                "Error closing config file $filename: $!\n" :
+		                "Error closing default config: $!\n");
+}
+
+sub open_default_config {
+	my $config = <<'EOF';
+# This is SoftSnow XChat2 Filter configuration file.
+#
+# Any line which starts with a # (hash) or : (colon) is a comment
+# and is ignored. Use of # is preferred; support for : was added for
+# compatibility with another filter-ebooks XChat2 plugin. Blank lines
+# are ignored.
+#
+# The file consists of sections and variables or rules. A section
+# begins with the name of the section in square brackets,
+# e.g. "[deny]", and continues until the next section begins. Section
+# names are not case sensitive.
+#
+# Currently recognized are now following sections:
+#  * 'config' (default section), which contains filter configuration:
+#    it consist of setting config variables (filter parameters).
+#  * 'allow' and 'deny', which contain filter rules, allow and deny
+#    rules, respectively. Allow rules, if enabled, are applied before
+#    deny rules.
+# Unknown (unrecognized) sections are skipped with warning.
+#
+# The 'config' section contains setting variables, in the form 
+# 'name = value'. Leading and trailing whitespace in a variable value
+# is discarded. Internal whitespace within a variable value is retained
+# verbatim. Boolean values may be given as yes/no, on/off, 0/1 or
+# true/false.
+
+# NOTE that only variables explicitely listed in 'config' section
+# of configuration file will be saved! All the rest would reset to
+# default (starting) value.
+
+## Filter CONFIG
+[config]
+
+# Should filter be turned on by default?
+filter = off
+# Limit filtering to given IRC server (host); set to empty to filter all
+limit_to_server =
+
+# Whether to log (print) filtered lines to separate window (tab)
+filtered_to_window = 0
+# Name of window (tab) with filtered lines
+filter_window = (filtered)
+
+# Use (turn on) ALLOW rules
+use_filter_allow = 0
+
+
+# Sections 'allow' and 'deny' consist entirely of regular expressions
+# in the form of 'qr/regexp/' or '/regexp/' for case-sensitive filter
+# rule, and 'qr/regexp/i' and '/regexp/i' for case-insensitive rule.
+# Other forms of regexp quoting _should_ be recognized, but YMMV.
+
+## ALLOW rules, applied before DENY rules (i.e. exceptions)
+[allow]
+#show what people search for
+qr/^\@search\s/
+
+
+## DENY rules: which lines to filter (do not show)
+[deny]
+#generic conventions for announcements, etc.
+qr/\@/
+qr/^\s*\!/
+qr/slot\(s\)/
+qr/~&~&~/
+
+#xdcc
+qr/^\#\d+/
+
+#fserves
+qr/fserve.*trigger/i
+qr/trigger.*(?:\!|\/ctcp)/i
+qr/type\:\s*\!/i
+qr/^Type\s*[!@]/
+qr/file server online/i
+
+#ftps
+qr/ftp.*l\/p/i
+
+#CTCPs
+qr/SLOTS/
+qr/LIST/
+qr/MP3 /
+
+#messages for when a file is received/failed to receive
+qr/DEFINITELY had the right stuff to get/i
+qr/has just received/i
+qr/I have just received/i
+qr/(?:^\s+|Bytes )Sent\: /
+
+#mis-paste
+qr/\s+\:\:\:INFO\:\:+(?:[KM]B|bytes)/
+qr/^-+.+(?:[KM]B|bytes)$/
+
+#mp3 play messages
+qr/is listening to/
+qr/\]\-MP3INFO\-\[/
+
+#spammy scripts
+qr/\]\-SpR\-\[/
+qr/We are BORG/
+
+#general messages
+qr/brave soldier in the war/
+qr/if you \*must\* have it\./
+qr/For Your Leeching Pleasure/
+qr/Message:\[/
+qr/I am travelling so the hotel firewalls stop all but passive DCC\./
+
+
+## end of SoftSnow XChat Filter config.
+EOF
+
+	open my $fd, '<', \$config;
+	return $fd;
 }
 
 # ............................................................
@@ -1076,7 +1182,8 @@ sub filter_command_handler {
 		load_config($arg);
 
 	} elsif ($cmd =~ /^RESET$/i) {
-		load_config($data_fh);
+		my $fh = open_default_config();
+		load_config($fh);
 
 	} elsif ($cmd =~ /^CONVERT$/i) {
 		my $rules_file = $arg || $filter_file;
@@ -1171,114 +1278,4 @@ sub filterwindow_command_handler {
 Xchat::print("${B}$scriptName $scriptVersion${B} loaded\n");
 
 1;
-__DATA__
-# This is SoftSnow XChat2 Filter configuration file.
-#
-# Any line which starts with a # (hash) or : (colon) is a comment
-# and is ignored. Use of # is preferred; support for : was added for
-# compatibility with another filter-ebooks XChat2 plugin. Blank lines
-# are ignored.
-#
-# The file consists of sections and variables. A section begins with
-# the name of the section in square brackets and continues until the
-# next section begins. Section names are not case sensitive.
-#
-# Currently are now recognized the following sections:
-#  * 'config' (default section), which contains filter configuration:
-#    it consist of setting config variables (filter parameters).
-#  * 'allow' and 'deny', which contain filter rules, allow and deny
-#    rules, respectively. Allow rules, if enabled, are applied before
-#    deny rules.
-# Unknown (unrecognized) sections are skipped with warning.
-#
-# The 'config' section contains setting variables, in the form 
-# 'name = value'. Leading and trailing whitespace in a variable value
-# is discarded. Internal whitespace within a variable value is retained
-# verbatim. Boolean values may be given as yes/no, on/off, 0/1 or
-# true/false.
-
-# NOTE that only variables explicitely listed in 'config' section
-# of configuration file will be saved! All the rest would reset to
-# default (starting) value.
-
-
-## Filter CONFIG
-
-# Should filter be turned on by default?
-filter = off
-# Limit filtering to given IRC server (host); set to empty to filter all
-limit_to_server =
-
-# Whether to log (print) filtered lines to separate window (tab)
-filtered_to_window = 0
-# Name of window (tab) with filtered lines
-filter_window = (filtered)
-
-# Use (turn on) ALLOW rules
-use_filter_allow = 0
-
-
-# Sections 'allow' and 'deny' consist entirely of regular expressions
-# in the form of 'qr/regexp/' or '/regexp/' for case-sensitive filter
-# rule, and 'qr/regexp/i' and '/regexp/i' for case-insensitive rule.
-# Other forms of regexp quoting _should_ be recognized, but YMMV.
-
-## ALLOW rules, applied before DENY rules (i.e. exceptions)
-[allow]
-#show what people search for
-qr/^\@search\s/
-
-
-## DENY rules: which lines to filter (do not show)
-[deny]
-#generic conventions for announcements, etc.
-qr/\@/
-qr/^\s*\!/
-qr/slot\(s\)/
-qr/~&~&~/
-
-#xdcc
-qr/^\#\d+/
-
-#fserves
-qr/fserve.*trigger/i
-qr/trigger.*(?:\!|\/ctcp)/i
-qr/type\:\s*\!/i
-qr/^Type\s*[!@]/
-qr/file server online/i
-
-#ftps
-qr/ftp.*l\/p/i
-
-#CTCPs
-qr/SLOTS/
-qr/LIST/
-qr/MP3 /
-
-#messages for when a file is received/failed to receive
-qr/DEFINITELY had the right stuff to get/i
-qr/has just received/i
-qr/I have just received/i
-qr/(?:^\s+|Bytes )Sent\: /
-
-#mis-paste
-qr/\s+\:\:\:INFO\:\:+(?:[KM]B|bytes)/
-qr/^-+.+(?:[KM]B|bytes)$/
-
-#mp3 play messages
-qr/is listening to/
-qr/\]\-MP3INFO\-\[/
-
-#spammy scripts
-qr/\]\-SpR\-\[/
-qr/We are BORG/
-
-#general messages
-qr/brave soldier in the war/
-qr/if you \*must\* have it\./
-qr/For Your Leeching Pleasure/
-qr/Message:\[/
-qr/I am travelling so the hotel firewalls stop all but passive DCC\./
-
-
-## end of SoftSnow XChat Filter config.
+__END__
